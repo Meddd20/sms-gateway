@@ -1,0 +1,86 @@
+<resources>
+    <string name="app_name">SMSGateway</string>
+    <string name="notification_channel_default">com.httpsms.notification.default</string>
+    <string name="sign_in_button">Masuk dengan API Key</string>
+    <string name="text_area_api_key">API Key</string>
+    <string name="hint_api_key">Tempel atau Scan API Key</string>
+    <string name="img_http_sms_logo">Logo SMSGateway</string>
+    <string name="main_log_out">Keluar</string>
+    <string name="sim_card_title">Kartu SIM</string>
+    <string name="sim_card_no_sim">Tidak ada kartu SIM yang terdeteksi. Masukkan kartu SIM untuk melanjutkan.</string>
+    <string name="sim_card_number_unreadable">Nomor tidak dapat dibaca pada SIM ini</string>
+    <string name="sim_card_tap_to_enter">Nomor SIM tidak terbaca — ketuk untuk memasukkannya secara manual</string>
+    <string name="sim_sheet_title">Pilih SIM yang akan digunakan untuk mengirim pesan</string>
+    <string name="sim_card_number_label">Nomor telepon</string>
+    <string name="sim_card_number_placeholder">contoh: +6281338266173 (format internasional)</string>
+    <string name="sim_card_number_use">Gunakan nomor ini</string>
+    <string name="send_heartbeat">Kirim Sinyal Status</string>
+    <string name="app_version">SMSGateway - %s</string>
+    <string name="main_app_settings">Pengaturan Aplikasi</string>
+    <string name="settings_sim1">SIM 1</string>
+    <string name="settings_sim_2">SIM 2</string>
+    <string name="settings_outgoing_messages_sim1">Aktifkan pesan keluar untuk SIM 1</string>
+    <string name="settings_incoming_messages_sim1">Aktifkan pesan masuk untuk SIM 1</string>
+    <string name="settings_incoming_messages_sim2">Aktifkan pesan masuk untuk SIM 2</string>
+    <string name="settings_outgoing_messages_sim2">Aktifkan pesan keluar untuk SIM 2</string>
+
+    <!-- Login -->
+    <string name="login_scanned_qr">Berhasil dipindai: %1$s</string>
+    <string name="login_scan_cancelled">Pemindaian dibatalkan</string>
+    <string name="login_scan_qr_prompt">Pindai kode QR</string>
+    <string name="login_fcm_token_missing">Token notifikasi (FCM) tidak ditemukan. Pastikan Google Play Services sudah terpasang di perangkat Anda</string>
+    <string name="login_sim1_number_unreadable">Nomor untuk SIM 1 tidak dapat dibaca dari perangkat. Lepas dan pasang kembali kartu SIM Anda, lalu coba lagi.</string>
+    <string name="login_unexpected_error">Terjadi kesalahan yang tidak terduga: %1$s</string>
+
+    <!-- SIM picker -->
+    <string name="sim_card_sim_label">SIM %1$d</string>
+    <string name="sim_card_select_sim_description">Pilih SIM</string>
+    <string name="sim_card_selected_description">Terpilih</string>
+    <string name="sim_card_help_description">Bantuan kartu SIM</string>
+    <string name="api_key_help_description">Bantuan API Key</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Pengaturan Aplikasi</string>
+    <string name="back_content_description">Kembali</string>
+    <string name="logout_dialog_title">Konfirmasi</string>
+    <string name="logout_dialog_message">Apakah Anda yakin ingin keluar?</string>
+    <string name="dialog_cancel">Batal</string>
+    <string name="dialog_logout">Keluar</string>
+    <string name="heartbeat_sent_success">Sinyal status berhasil dikirim</string>
+    <string name="heartbeat_network_error">Sinyal status gagal dikirim. Pastikan ponsel Anda terhubung ke internet</string>
+
+    <!-- Listener service -->
+    <string name="listener_notification_title">Pemantau SMSGateway</string>
+    <string name="listener_notification_text">SMSGateway sedang memantau pesan SMS yang terkirim dan diterima di latar belakang.</string>
+    <string name="listener_service_destroyed">Layanan dihentikan</string>
+    <string name="scan_qr_content_description">Pindai Kode QR</string>
+
+    <!-- Main required setup dialog -->
+    <string name="main_dialog_battery_title">Penghemat Baterai</string>
+    <string name="main_dialog_sms_title">Izin SMS</string>
+    <string name="main_card_battery_description">Penghemat baterai sedang aktif. Nonaktifkan fitur ini agar aplikasi tetap berjalan meskipun layar dalam keadaan mati.</string>
+    <string name="main_card_disable_battery">Nonaktifkan Penghemat Baterai</string>
+    <string name="main_card_sms_description">Izin SMS belum diaktifkan. Tanpa izin ini, aplikasi tidak dapat mengirim maupun menerima pesan.</string>
+    <string name="main_card_enable_sms">Aktifkan Izin SMS</string>
+    <string name="main_dialog_autostart_title">Autostart</string>
+    <string name="main_dialog_autostart_description">Aktifkan Autostart / No Restrictions untuk SMSGateway di pengaturan ponsel, agar sistem tidak mematikan aplikasi saat berjalan di latar belakang.</string>
+    <string name="main_dialog_autostart_open">Buka Pengaturan</string>
+    <string name="main_dialog_autostart_done">Sudah Saya Aktifkan</string>
+
+    <!-- Header Login -->
+    <string name="login_header_title">SMS Gateway</string>
+    <string name="login_header_subtitle">Layanan penghubung untuk mengirimkan notifikasi transaksi ke nomor nasabah Anda..</string>
+
+    <!-- Help Sheet: API Key -->
+    <string name="help_api_key_title">Apa itu API Key?</string>
+    <string name="help_api_key_desc">API Key adalah kode otentikasi unik untuk menghubungkan ponsel ini ke dashboard CoreSystem instansi Anda.</string>
+    <string name="help_api_key_instruction">Anda dapat menyalin kode atau memindai QR langsung dari menu Pengaturan Gateway di CoreSystem.</string>
+    <string name="help_api_key_contact">Jika mengalami kendala, silakan hubungi tim IT Sevanam.</string>
+
+    <!-- Help Sheet: SIM Card -->
+    <string name="help_sim_title">Pemilihan Kartu SIM</string>
+    <string name="help_sim_desc">Kartu yang dipilih akan digunakan untuk mengirim pesan notifikasi sekaligus menerima balasan dari nasabah/anggota.</string>
+    <string name="help_sim_note_consistency">• Hindari terlalu sering mengganti nomor agar tidak membingungkan nasabah.</string>
+    <string name="help_sim_note_balance">• Pastikan pulsa atau paket SMS selalu mencukupi.</string>
+    <string name="help_sim_note_signal">• Pastikan kartu berada dalam jangkauan sinyal yang stabil.</string>
+</resources>
