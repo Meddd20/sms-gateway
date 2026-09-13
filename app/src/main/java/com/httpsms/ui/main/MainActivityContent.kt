@@ -16,15 +16,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Smartphone
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -35,15 +34,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
 import com.httpsms.R
+import com.httpsms.ui.components.ErrorDialog
+import com.httpsms.ui.components.GatewayDialog
+import com.httpsms.ui.components.HelpNote
+import com.httpsms.ui.components.HelpSheet
+import com.httpsms.ui.components.HelpSheetHeader
 import com.httpsms.ui.components.SimCardSelector
 import com.httpsms.ui.theme.Blue500
 import com.httpsms.ui.theme.Pink500
@@ -61,6 +61,7 @@ fun MainScreen(
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var showLogoutDialog by remember { mutableStateOf(false) }
+    var showSimHelp by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -89,6 +90,10 @@ fun MainScreen(
                     else -> ""
                 }
             },
+            // The line is fixed once logged in - changing it happens through the
+            // login flow, which the help sheet explains.
+            enabled = false,
+            onHelpClick = { showSimHelp = true },
             onSimSelected = { index -> viewModel.selectSim(context, index) },
             onSimNumberConfirmed = { index, number -> viewModel.confirmSimNumber(context, index, number) },
             modifier = Modifier.fillMaxWidth()
@@ -114,15 +119,28 @@ fun MainScreen(
                 buttonText = stringResource(id = R.string.main_card_enable_sms),
                 onAction = onSmsPermissionClick
             )
-            needsAutostartStep -> GatewayDialog(
-                title = stringResource(id = R.string.main_dialog_autostart_title),
-                description = stringResource(id = R.string.main_dialog_autostart_description),
-                primaryText = stringResource(id = R.string.main_dialog_autostart_open),
-                onPrimary = onOemAutostartClick,
-                secondaryText = stringResource(id = R.string.main_dialog_autostart_done),
-                onSecondary = { viewModel.acknowledgeOemAutostart(context) },
-                onDismiss = null
-            )
+            needsAutostartStep -> {
+                // The confirm button only appears once the user has actually been sent
+                // to the OEM autostart screen: the toggle itself cannot be read back,
+                // so requiring the visit is the strongest precondition available.
+                val confirmAutostart: (() -> Unit)? = if (uiState.hasOpenedAutostartSettings) {
+                    { viewModel.acknowledgeOemAutostart(context) }
+                } else {
+                    null
+                }
+                GatewayDialog(
+                    title = stringResource(id = R.string.main_dialog_autostart_title),
+                    description = stringResource(id = R.string.main_dialog_autostart_description),
+                    primaryText = stringResource(id = R.string.main_dialog_autostart_open),
+                    onPrimary = {
+                        viewModel.markAutostartSettingsOpened(context)
+                        onOemAutostartClick()
+                    },
+                    secondaryText = if (confirmAutostart != null) stringResource(id = R.string.main_dialog_autostart_done) else null,
+                    onSecondary = confirmAutostart,
+                    onDismiss = null
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -222,6 +240,33 @@ fun MainScreen(
             onDismiss = { showLogoutDialog = false }
         )
     }
+
+    // A user-initiated request (e.g. the heartbeat) came back with an error: show
+    // the message the request returned in the app's standard dialog.
+    val errorMessage = uiState.errorMessage
+    if (errorMessage != null) {
+        ErrorDialog(
+            message = errorMessage,
+            onDismiss = { viewModel.dismissError() }
+        )
+    }
+
+    if (showSimHelp) {
+        HelpSheet(onDismiss = { showSimHelp = false }) {
+            HelpSheetHeader(
+                icon = Icons.Default.Smartphone,
+                title = stringResource(id = R.string.main_sim_help_title),
+                description = stringResource(id = R.string.main_sim_help_desc)
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            HelpNote(
+                icon = Icons.AutoMirrored.Filled.Logout,
+                text = stringResource(id = R.string.main_sim_help_note_logout)
+            )
+        }
+    }
 }
 
 @Composable
@@ -238,76 +283,6 @@ private fun RequiredSetupDialog(
         onPrimary = onAction,
         onDismiss = null
     )
-}
-
-@Composable
-private fun GatewayDialog(
-    title: String,
-    description: String,
-    primaryText: String,
-    onPrimary: () -> Unit,
-    secondaryText: String? = null,
-    onSecondary: (() -> Unit)? = null,
-    onDismiss: (() -> Unit)?
-) {
-    Dialog(onDismissRequest = { onDismiss?.invoke() }) {
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = Color.White,
-            modifier = Modifier.width(320.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = title.uppercase(),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp,
-                    color = colorResource(id = R.color.gateway_navy),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = description,
-                    fontSize = 14.sp,
-                    color = colorResource(id = R.color.gateway_navy),
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(
-                    onClick = onPrimary,
-                    colors = ButtonDefaults.buttonColors(containerColor = colorResource(id = R.color.gateway_navy)),
-                    shape = RoundedCornerShape(14.dp),
-                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = primaryText.uppercase(),
-                        color = Color.White,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp
-                    )
-                }
-                if (secondaryText != null && onSecondary != null) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    TextButton(
-                        onClick = onSecondary,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = secondaryText.uppercase(),
-                            color = colorResource(id = R.color.gateway_navy),
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-            }
-        }
-    }
 }
 
 

@@ -14,3 +14,4 @@
 .cxx
 .kotlin/sessions/
 local.properties
+app/google-services.json

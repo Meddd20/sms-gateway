@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("com.google.gms.google-services")
@@ -5,17 +7,37 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+// Android has no ".env": local.properties is the equivalent. It is already
+// gitignored, so machine-specific config belongs there:
+//
+//   SERVER_URL=https://api.backend.example
+//
+// The key is optional - the default below is used when it is absent.
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+fun buildConfigString(name: String, default: String): String {
+    val value = localProperties.getProperty(name) ?: default
+    return "\"$value\""
+}
+
 android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.httpsms"
+        applicationId = "com.sevanam.androidsmsgateway"
         minSdk = 28
         targetSdk = 37
         versionCode = 1
         versionName = "1.0.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
-        buildConfigField("String", "SERVER_URL", "\"https://api.httpsms.com\"")
+
+        // Endpoint is configurable per machine, defaulting to the public API.
+        buildConfigField("String", "SERVER_URL", buildConfigString("SERVER_URL", "https://api.httpsms.com"))
     }
 
     buildTypes {

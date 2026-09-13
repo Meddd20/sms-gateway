@@ -2,14 +2,12 @@ package com.httpsms
 
 import android.content.Intent
 import android.os.Bundle
-import android.widget.Toast
-import androidx.activity.compose.setContent
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.httpsms.core.Settings
 // import com.httpsms.ui.settings.SettingsScreen
 import com.httpsms.ui.settings.SettingsViewModel
-import com.httpsms.ui.theme.HttpSmsTheme
 import timber.log.Timber
 
 class SettingsActivity : AppCompatActivity() {

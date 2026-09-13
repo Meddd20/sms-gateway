@@ -3,16 +3,16 @@ package com.httpsms.ui.settings
 import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.httpsms.Constants
-import com.httpsms.HttpSmsApiService
-import com.httpsms.R
-import com.httpsms.Settings
+import com.httpsms.core.Constants
+import com.httpsms.core.DeviceStatus
+import com.httpsms.core.Settings
+import com.httpsms.data.api.ApiResult
+import com.httpsms.data.api.SmsGatewayApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import timber.log.Timber
 
 data class SettingsUiState(
     val isDebugLogEnabled: Boolean = false,
@@ -94,23 +94,19 @@ class SettingsViewModel : ViewModel() {
 
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
-                val charging = Settings.isCharging(context)
-                try {
-                    val phoneNumbers = mutableListOf<String>()
-                    phoneNumbers.add(Settings.getSIM1PhoneNumber(context))
-                    if (Settings.getActiveStatus(context, Constants.SIM2)) {
-                        phoneNumbers.add(Settings.getSIM2PhoneNumber(context))
-                    }
-                    val isStored = HttpSmsApiService.create(context).storeHeartbeat(context, phoneNumbers.toTypedArray(), charging)
-                    if (!isStored) {
-                        context.getString(R.string.heartbeat_network_error)
-                    } else {
+                val phoneNumbers = mutableListOf<String>()
+                phoneNumbers.add(Settings.getSIM1PhoneNumber(context))
+                if (Settings.getActiveStatus(context, Constants.SIM2)) {
+                    phoneNumbers.add(Settings.getSIM2PhoneNumber(context))
+                }
+
+                when (val heartbeat = SmsGatewayApi.from(context).storeHeartbeat(DeviceStatus.read(context), phoneNumbers)) {
+                    // Success carries no message to show, so the screen stays clean.
+                    is ApiResult.Success -> {
                         Settings.setHeartbeatTimestampAsync(context, System.currentTimeMillis())
                         null
                     }
-                } catch (exception: Exception) {
-                    Timber.e(exception)
-                    exception.javaClass.simpleName
+                    is ApiResult.Failure -> heartbeat.message
                 }
             }
 

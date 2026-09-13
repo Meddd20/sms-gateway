@@ -49,7 +49,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.httpsms.R
-import com.httpsms.SimInfo
+import com.httpsms.sms.SimInfo
 
 /**
  * A single-select SIM picker: a read-only text field summarizing the currently
@@ -75,7 +75,8 @@ fun SimCardSelector(
     supportingText: String? = null,
     onSimSelected: (Int) -> Unit,
     onSimNumberConfirmed: (Int, String) -> Unit,
-    onHelpClick: (() -> Unit)? = null
+    onHelpClick: (() -> Unit)? = null,
+    onOpenClick: (() -> Unit)? = null
 ) {
     var showSimSheet by remember { mutableStateOf(false) }
 
@@ -93,7 +94,7 @@ fun SimCardSelector(
         selectedSimIndex in sims.indices &&
         numberForIndex(selectedSimIndex).isBlank()
     val effectiveSupportingText = supportingText
-        ?: if (selectedNumberBlank) stringResource(id = R.string.sim_card_tap_to_enter) else null
+        ?: if (enabled && selectedNumberBlank) stringResource(id = R.string.sim_card_tap_to_enter) else null
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -133,7 +134,10 @@ fun SimCardSelector(
                 modifier = Modifier
                     .matchParentSize()
                     .clip(RoundedCornerShape(4.dp))
-                    .clickable(enabled = sims.isNotEmpty() && enabled) { showSimSheet = true },
+                    .clickable(enabled = sims.isNotEmpty() && enabled) {
+                        onOpenClick?.invoke()
+                        showSimSheet = true
+                    },
                 contentAlignment = Alignment.CenterEnd
             ) {
                 Icon(

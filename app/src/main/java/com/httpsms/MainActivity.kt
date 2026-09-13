@@ -1,12 +1,10 @@
 package com.httpsms
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -21,11 +19,17 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.httpsms.services.StickyNotificationService
+import com.httpsms.core.Constants
+import com.httpsms.core.GatewayLogging
+import com.httpsms.core.OemSettings
+import com.httpsms.core.Settings
+import com.httpsms.data.api.ApiResult
+import com.httpsms.data.api.SmsGatewayApi
+import com.httpsms.background.StickyNotificationService
 import com.httpsms.ui.main.MainScreen
 import com.httpsms.ui.main.MainViewModel
 import com.httpsms.ui.theme.HttpSmsTheme
-import com.httpsms.worker.HeartbeatWorker
+import com.httpsms.background.HeartbeatWorker
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
@@ -36,7 +40,7 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        initTimber()
+        GatewayLogging.init(this)
 
         redirectToLogin()
 
@@ -65,10 +69,9 @@ class MainActivity : AppCompatActivity() {
                     },
                     onHeartbeatClick = {
                         viewModel.sendHeartbeat(this) { error ->
-                            if (error != null) {
-                                Timber.w("heartbeat sending failed with [$error]")
-                                Toast.makeText(this, error, Toast.LENGTH_LONG).show()
-                            } else {
+                            // Failures are surfaced by the ErrorDialog from uiState.errorMessage,
+                            // carrying the message the request itself returned.
+                            if (error == null) {
                                 Toast.makeText(this, getString(R.string.heartbeat_sent_success), Toast.LENGTH_SHORT).show()
                             }
                         }
@@ -193,28 +196,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun sendFCMToken(timestamp: Long, context:Context, phoneNumber: String, sim: String) {
         Thread {
-            val response = HttpSmsApiService.create(context).updateFcmToken(phoneNumber, sim,Settings.getFcmToken(context) ?: "")
-            if (response.first != null) {
-                Settings.setUserID(context, response.first!!.userID)
-                Settings.setFcmTokenLastUpdateTimestampAsync(context, timestamp)
-                Timber.i("[${sim}] FCM token uploaded successfully")
-                return@Thread
-            } else {
-                Timber.e("[${sim}] could not update FCM token")
+            val fcmToken = Settings.getFcmToken(context) ?: ""
+            when (val result = SmsGatewayApi.from(context).updateFcmToken(phoneNumber, sim, fcmToken)) {
+                is ApiResult.Success -> {
+                    Settings.setUserID(context, result.value.userID)
+                    Settings.setFcmTokenLastUpdateTimestampAsync(context, timestamp)
+                    Timber.i("[${sim}] FCM token uploaded successfully")
+                }
+                is ApiResult.Failure -> Timber.e("[${sim}] could not update FCM token: [${result.message}]")
             }
         }.start()
-    }
-
-    private fun initTimber() {
-        if (Timber.treeCount > 1) {
-            Timber.d("timber is already initialized with count [${Timber.treeCount}]")
-            return
-        }
-
-        if(Settings.isDebugLogEnabled(this)) {
-            Timber.plant(Timber.DebugTree())
-            Timber.plant(LogzTree(this.applicationContext))
-        }
     }
 
     private fun onSettingsClick() {

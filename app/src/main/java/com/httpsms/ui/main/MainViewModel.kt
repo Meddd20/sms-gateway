@@ -6,12 +6,13 @@ import android.content.pm.PackageManager
 import android.os.PowerManager
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.httpsms.Constants
-import com.httpsms.HttpSmsApiService
-import com.httpsms.R
-import com.httpsms.Settings
-import com.httpsms.SimInfo
-import com.httpsms.SmsManagerService
+import com.httpsms.core.Constants
+import com.httpsms.core.DeviceStatus
+import com.httpsms.core.Settings
+import com.httpsms.data.api.ApiResult
+import com.httpsms.data.api.SmsGatewayApi
+import com.httpsms.sms.SimInfo
+import com.httpsms.sms.SmsManagerService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,7 +37,9 @@ data class MainUiState(
     val isSmsPermissionGranted: Boolean = true,
     val isBatteryOptimizationDisabled: Boolean = true,
     val isOemAutostartAcknowledged: Boolean = false,
+    val hasOpenedAutostartSettings: Boolean = false,
     val isHeartbeatLoading: Boolean = false,
+    val errorMessage: String? = null,
     val appVersion: String = ""
 )
 
@@ -106,12 +109,23 @@ class MainViewModel : ViewModel() {
             isSmsPermissionGranted = allGranted,
             isBatteryOptimizationDisabled = batteryOptimized,
             isOemAutostartAcknowledged = Settings.isOemAutostartAcknowledged(context),
+            hasOpenedAutostartSettings = Settings.isOemAutostartSettingsOpened(context),
             appVersion = appVersion
         )
     }
 
     fun acknowledgeOemAutostart(context: Context) {
         Settings.setOemAutostartAcknowledged(context, true)
+        updateState(context, _uiState.value.appVersion)
+    }
+
+    /**
+     * Recorded when the user is sent to the OEM autostart screen. The state of that
+     * toggle cannot be read back, so this is the only precondition we can enforce
+     * before letting them confirm the step.
+     */
+    fun markAutostartSettingsOpened(context: Context) {
+        Settings.setOemAutostartSettingsOpened(context)
         updateState(context, _uiState.value.appVersion)
     }
 
@@ -145,16 +159,12 @@ class MainViewModel : ViewModel() {
         }
 
         viewModelScope.launch(Dispatchers.IO) {
-            try {
-                val response = HttpSmsApiService.create(context).updateFcmToken(phoneNumber, sim, fcmToken)
-                if (response.first != null) {
-                    Settings.setUserID(context, response.first?.userID)
+            when (val result = SmsGatewayApi.from(context).updateFcmToken(phoneNumber, sim, fcmToken)) {
+                is ApiResult.Success -> {
+                    Settings.setUserID(context, result.value.userID)
                     Timber.i("[$sim] fcm token registered for [$phoneNumber]")
-                } else {
-                    Timber.e("[$sim] could not register fcm token: [${response.second ?: response.third}]")
                 }
-            } catch (e: Exception) {
-                Timber.e(e, "[$sim] failed to register fcm token")
+                is ApiResult.Failure -> Timber.e("[$sim] could not register fcm token: [${result.message}]")
             }
         }
     }
@@ -167,34 +177,34 @@ class MainViewModel : ViewModel() {
     }
 
     fun sendHeartbeat(context: Context, onComplete: (String?) -> Unit) {
-        _uiState.value = _uiState.value.copy(isHeartbeatLoading = true)
+        _uiState.value = _uiState.value.copy(isHeartbeatLoading = true, errorMessage = null)
 
         viewModelScope.launch {
             val result = withContext(Dispatchers.IO) {
-                val charging = Settings.isCharging(context)
-                try {
-                    val phoneNumbers = mutableListOf<String>()
-                    phoneNumbers.add(Settings.getSIM1PhoneNumber(context))
-                    if (Settings.getActiveStatus(context, Constants.SIM2)) {
-                        phoneNumbers.add(Settings.getSIM2PhoneNumber(context))
-                    }
-                    val isStored = HttpSmsApiService.create(context).storeHeartbeat(context, phoneNumbers.toTypedArray(), charging)
-                    if (!isStored) {
-                        context.getString(R.string.heartbeat_network_error)
-                    } else {
+                val phoneNumbers = mutableListOf<String>()
+                phoneNumbers.add(Settings.getSIM1PhoneNumber(context))
+                if (Settings.getActiveStatus(context, Constants.SIM2)) {
+                    phoneNumbers.add(Settings.getSIM2PhoneNumber(context))
+                }
+
+                when (val heartbeat = SmsGatewayApi.from(context).storeHeartbeat(DeviceStatus.read(context), phoneNumbers)) {
+                    // Success carries no message to show, so the screen stays clean.
+                    is ApiResult.Success -> {
                         Settings.setHeartbeatTimestampAsync(context, System.currentTimeMillis())
                         null
                     }
-                } catch (exception: Exception) {
-                    Timber.e(exception)
-                    exception.javaClass.simpleName
+                    is ApiResult.Failure -> heartbeat.message
                 }
             }
 
-            _uiState.value = _uiState.value.copy(isHeartbeatLoading = false)
+            _uiState.value = _uiState.value.copy(isHeartbeatLoading = false, errorMessage = result)
             updateState(context, _uiState.value.appVersion)
             onComplete(result)
         }
+    }
+
+    fun dismissError() {
+        _uiState.value = _uiState.value.copy(errorMessage = null)
     }
 
     fun logout(context: Context, onLogoutComplete: () -> Unit) {

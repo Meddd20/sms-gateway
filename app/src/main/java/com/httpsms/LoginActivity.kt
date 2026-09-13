@@ -1,10 +1,8 @@
 package com.httpsms
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.telephony.TelephonyManager
@@ -16,9 +14,10 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.core.app.ActivityCompat
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
+import com.httpsms.core.GatewayLogging
+import com.httpsms.core.Settings
 import com.httpsms.ui.login.LoginScreen
 import com.httpsms.ui.login.LoginViewModel
 import com.httpsms.ui.theme.HttpSmsTheme
@@ -31,6 +30,7 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        GatewayLogging.init(this)
         redirectToMain()
 
         viewModel.initialize(this)
@@ -76,7 +76,7 @@ class LoginActivity : AppCompatActivity() {
 
     private val barcodeLauncher = registerForActivityResult(ScanContract()) { result ->
         if (result.contents != null) {
-            viewModel.onApiKeyChange(result.contents)
+            viewModel.onPairingCodeChange(result.contents)
             Toast.makeText(this, getString(R.string.login_scanned_qr, result.contents), Toast.LENGTH_LONG).show()
         } else {
             Toast.makeText(this, getString(R.string.login_scan_cancelled), Toast.LENGTH_SHORT).show()
@@ -96,26 +96,6 @@ class LoginActivity : AppCompatActivity() {
         super.onStart()
         Timber.i("on start")
         requestPermissions()
-    }
-
-    @SuppressLint("HardwareIds")
-    @Suppress("DEPRECATION")
-    private fun getPhoneNumber(context: Context): String? {
-        val telephonyManager = this.getSystemService(Context.TELEPHONY_SERVICE) as TelephonyManager
-        if (ActivityCompat.checkSelfPermission(
-                this,
-                Manifest.permission.READ_SMS
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            Timber.e("cannot get owner because permissions are not granted")
-            return Settings.getSIM1PhoneNumber(this)
-        }
-
-        if (telephonyManager.line1Number != null && telephonyManager.line1Number  != "") {
-            Settings.setSIM1PhoneNumber(context, telephonyManager.line1Number)
-        }
-
-        return telephonyManager.line1Number
     }
 
     private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
