@@ -9,13 +9,13 @@ Update file ini setiap payload/protocol berubah.
 
 | Item | Nilai |
 |---|---|
-| Base URL | **Statis** di `BuildConfig.SERVER_URL` (build-time, placeholder `https://api.httpsms.com` — ganti dengan backend sendiri sebelum build). |
+| Base URL | **Statis** di `BuildConfig.SERVER_URL` (build-time, dibaca dari `local.properties`; placeholder `https://api.example.com/` — ganti dengan backend sendiri sebelum build). |
 | Header semua request | `x-api-key: <API key user>` dan `X-Client-Version: <versi app>` (contoh `1.0.0`). |
 | Envelope response standar | `{ "data": ..., "message": "...", "status": "..." }` (diparse oleh app; `data` bisa berisi object). |
 | Format timestamp | ISO-8601 UTC: `yyyy-MM-dd'T'HH:mm:ss.SSS'000000'Z` (mis. `2026-09-09T03:00:00.000000Z`). |
 
-Kode pemanggil: `app/src/main/java/com/httpsms/HttpSmsApiService.kt`.
-Model: `app/src/main/java/com/httpsms/Models.kt`.
+Kode pemanggil: `app/src/main/java/com/httpsms/data/api/SmsGatewayApi.kt` (lapisan HTTP: `data/api/ApiClient.kt`).
+Model: `app/src/main/java/com/httpsms/data/model/`.
 
 ---
 

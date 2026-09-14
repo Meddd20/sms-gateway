@@ -1,10 +1,10 @@
 <resources>
     <string name="app_name">SMSGateway</string>
-    <string name="notification_channel_default">com.httpsms.notification.default</string>
+    <string name="notification_channel_default">com.smsgateway.notification.default</string>
     <string name="sign_in_button">Masuk</string>
     <string name="text_area_pairing_code">Kode Pairing</string>
     <string name="hint_pairing_code">Tempel atau Scan Kode Pairing</string>
-    <string name="img_http_sms_logo">Logo SMSGateway</string>
+    <string name="img_logo">Logo SMSGateway</string>
     <string name="main_log_out">Keluar</string>
     <string name="sim_card_title">Kartu SIM</string>
     <string name="sim_card_no_sim">Tidak ada kartu SIM yang terdeteksi. Masukkan kartu SIM untuk melanjutkan.</string>

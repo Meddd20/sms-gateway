@@ -91,7 +91,7 @@ fun LoginScreen(
 
         Image(
             painter = painterResource(id = R.drawable.sevanam),
-            contentDescription = stringResource(id = R.string.img_http_sms_logo),
+            contentDescription = stringResource(id = R.string.img_logo),
             modifier = Modifier.size(200.dp)
         )
 

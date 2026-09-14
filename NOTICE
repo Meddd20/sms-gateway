@@ -1,0 +1,69 @@
+SMSGateway — NOTICE
+===================
+
+This application is a modified fork of the httpSMS Android application.
+
+Original work
+-------------
+httpSMS — https://github.com/NdoleStudio/httpsms
+Copyright (c) the httpSMS authors and contributors.
+Licensed under the GNU Affero General Public License v3.0 (AGPL-3.0).
+
+This project is an independent fork. It is not affiliated with, endorsed by,
+or maintained by the httpSMS project or NdoleStudio.
+
+Corresponding source
+--------------------
+As required by AGPL-3.0, the complete corresponding source of this fork is
+published at:
+
+    https://github.com/Meddd20/sms-gateway
+
+Modifications
+-------------
+This fork was created from the httpSMS Android client. The following changes
+have been made to the original work. Changes are ongoing — refer to the git
+history for the full record.
+
+Branding and configuration
+  - Rebranded as "SMSGateway" (application id com.sevanam.androidsmsgateway).
+    The original source namespace com.httpsms is still used by the code.
+  - User interface rewritten and localised to Indonesian.
+  - Forced light mode; removed the dark theme and its night resources.
+  - Replaced the built-in server URL with a per-machine value read from
+    local.properties.
+
+Source layout
+  - Moved the source tree into packages by concern: core/, data/ (api/, io/,
+    model/), sms/, push/, background/, ui/, util/.
+  - Split the previous monolithic models file and API service into
+    single-purpose files.
+
+Backend layer
+  - Introduced a shared OkHttp client, a uniform result type, a central list
+    of endpoint paths, a single traffic log and an error-body reader.
+  - Request and response bodies are now serialised with Klaxon models instead
+    of hand-built JSON strings.
+
+Login and registration
+  - Replaced the login credential with a one-time pairing code and a pairing
+    call (POST gateway/pair) that carries the device's FCM token, replacing the
+    previous per-SIM registration at login. Per-SIM FCM token registration is
+    retained for token refresh, app upgrades and SIM changes.
+  - Added an information sheet explaining that the active line is fixed until
+    logout.
+
+Messaging
+  - Message status reports (SENT / DELIVERED / FAILED) now also send a device
+    heartbeat.
+  - Removed an experimental, unused WebSocket transport.
+
+Setup and device requirements
+  - Replaced the setup prompts with blocking dialogs for battery optimisation,
+    SMS permission and OEM autostart, and added an information sheet for the
+    SIM card field on the home screen.
+
+License
+-------
+This project is licensed under the GNU Affero General Public License v3.0.
+See the LICENSE file for the full text.
