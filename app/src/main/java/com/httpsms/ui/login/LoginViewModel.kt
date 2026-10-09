@@ -4,9 +4,9 @@ import android.content.Context
 import android.os.Build
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.httpsms.BuildConfig
+import com.sevanam.androidsmsgateway.BuildConfig
 import com.httpsms.core.Constants
-import com.httpsms.R
+import com.sevanam.androidsmsgateway.R
 import com.httpsms.core.Settings
 import com.httpsms.data.api.ApiResult
 import com.httpsms.data.api.SmsGatewayApi

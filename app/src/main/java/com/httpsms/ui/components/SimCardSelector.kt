@@ -48,7 +48,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.httpsms.R
+import com.sevanam.androidsmsgateway.R
 import com.httpsms.sms.SimInfo
 
 /**

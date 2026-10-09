@@ -9,6 +9,7 @@ import com.httpsms.core.Settings
 // import com.httpsms.ui.settings.SettingsScreen
 import com.httpsms.ui.settings.SettingsViewModel
 import timber.log.Timber
+import com.sevanam.androidsmsgateway.R
 
 class SettingsActivity : AppCompatActivity() {
     private val viewModel: SettingsViewModel by viewModels()

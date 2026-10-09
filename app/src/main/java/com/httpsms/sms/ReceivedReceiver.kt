@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
-import android.util.Base64
 import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.NetworkType
@@ -22,7 +21,6 @@ import com.httpsms.core.Constants
 import com.httpsms.core.Settings
 import com.httpsms.data.api.ApiResult
 import com.httpsms.data.api.SmsGatewayApi
-import com.httpsms.data.model.ReceivedAttachment
 import com.httpsms.data.model.ReceivedMessageRequest
 import timber.log.Timber
 import java.io.File
@@ -182,38 +180,14 @@ class ReceivedReceiver: BroadcastReceiver()
             Timber.i("[${this.inputData.getString(Constants.KEY_MESSAGE_SIM)}] forwarding received message from [${this.inputData.getString(
                 Constants.KEY_MESSAGE_FROM)}] to [${this.inputData.getString(Constants.KEY_MESSAGE_TO)}]")
 
-            val sim = this.inputData.getString(Constants.KEY_MESSAGE_SIM)!!
             val from = this.inputData.getString(Constants.KEY_MESSAGE_FROM)!!
-            val to = this.inputData.getString(Constants.KEY_MESSAGE_TO)!!
             val content = this.inputData.getString(Constants.KEY_MESSAGE_CONTENT)!!
-            val encrypted = this.inputData.getBoolean(Constants.KEY_MESSAGE_ENCRYPTED, false)
-            val timestamp = this.inputData.getString(Constants.KEY_MESSAGE_TIMESTAMP)!!
 
             val attachmentsData = inputData.getStringArray(Constants.KEY_MESSAGE_ATTACHMENTS)
-            val attachments = attachmentsData?.mapNotNull {
-                val parts = it.split("|")
-                val file = File(parts[0])
-                if (file.exists()) {
-                    val bytes = file.readBytes()
-                    val base64Content = Base64.encodeToString(bytes, Base64.NO_WRAP)
-                    ReceivedAttachment(
-                        name = parts[2],
-                        contentType = parts[1],
-                        content = base64Content
-                    )
-                } else {
-                    null
-                }
-            }
 
             val request = ReceivedMessageRequest(
-                sim = sim,
-                from = from,
-                to = to,
-                content = content,
-                encrypted = encrypted,
-                timestamp = timestamp,
-                attachments = attachments
+                recipient = from,
+                message = content
             )
 
             val result = SmsGatewayApi.from(applicationContext).receive(request)

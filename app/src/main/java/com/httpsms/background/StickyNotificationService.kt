@@ -5,8 +5,8 @@ import android.content.Intent
 import android.os.IBinder
 import android.widget.Toast
 import com.httpsms.MainActivity
-import com.httpsms.R
 import timber.log.Timber
+import com.sevanam.androidsmsgateway.R
 
 class StickyNotificationService: Service() {
     override fun onBind(intent: Intent?): IBinder? {

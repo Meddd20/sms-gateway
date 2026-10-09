@@ -30,9 +30,10 @@ import com.httpsms.ui.main.MainScreen
 import com.httpsms.ui.main.MainViewModel
 import com.httpsms.ui.theme.HttpSmsTheme
 import com.httpsms.background.HeartbeatWorker
+import com.sevanam.androidsmsgateway.BuildConfig
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
-
+import com.sevanam.androidsmsgateway.R
 
 class MainActivity : AppCompatActivity() {
     private val viewModel: MainViewModel by viewModels()

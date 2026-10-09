@@ -24,6 +24,7 @@ import com.httpsms.ui.theme.HttpSmsTheme
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import timber.log.Timber
+import com.sevanam.androidsmsgateway.R
 
 class LoginActivity : AppCompatActivity() {
     private val viewModel: LoginViewModel by viewModels()

@@ -4,7 +4,7 @@ import android.content.Context
 import android.os.Build
 import com.beust.klaxon.Json
 import com.beust.klaxon.Klaxon
-import com.httpsms.BuildConfig
+import com.sevanam.androidsmsgateway.BuildConfig
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request

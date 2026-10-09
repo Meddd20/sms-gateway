@@ -16,7 +16,7 @@ import com.google.android.mms.pdu_alt.PduBody
 import com.google.android.mms.pdu_alt.PduComposer
 import com.google.android.mms.pdu_alt.PduPart
 import com.google.android.mms.pdu_alt.SendReq
-import com.httpsms.BuildConfig
+import com.sevanam.androidsmsgateway.BuildConfig
 import com.httpsms.sms.Encrypter
 import com.httpsms.sms.Receiver
 import com.httpsms.core.Constants
@@ -117,7 +117,11 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
         WorkManager
             .getInstance(this)
-            .enqueue(work)
+            .enqueueUniqueWork(
+                "send_sms_$messageID",
+                ExistingWorkPolicy.KEEP,
+                work
+            )
 
         Timber.d("work enqueued with ID [${work.id}] for messageID [${messageID}]")
         // [END dispatch_job]
@@ -161,7 +165,18 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 return Result.failure()
             }
 
+            if (Settings.isMessageProcessed(applicationContext, messageID)) {
+                Timber.w("Message [$messageID] has already been processed on this device, ignoring duplicate request")
+                return Result.success()
+            }
+
             val message = getMessage(applicationContext, messageID) ?: return Result.failure()
+
+            if (message.status != "outstanding") {
+                Timber.w("Message [$messageID] status is [${message.status}], not [outstanding], skipping duplicate send")
+                Settings.markMessageProcessed(applicationContext, messageID)
+                return Result.success()
+            }
 
             if (message.contact.isBlank()) {
                 Timber.w("message contact is blank, stopping processing")
@@ -190,6 +205,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 }
             }
 
+            Settings.markMessageProcessed(applicationContext, messageID)
             Receiver.register(applicationContext)
 
             if (message.attachments != null && message.attachments.isNotEmpty()) {

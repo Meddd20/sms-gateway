@@ -54,7 +54,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    namespace = "com.httpsms"
+    namespace = "com.sevanam.androidsmsgateway"
 
     buildFeatures {
         buildConfig = true

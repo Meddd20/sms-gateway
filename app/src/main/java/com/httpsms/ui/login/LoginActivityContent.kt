@@ -56,7 +56,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.httpsms.R
+import com.sevanam.androidsmsgateway.R
 import com.httpsms.ui.components.ErrorDialog
 import com.httpsms.ui.components.HelpNote
 import com.httpsms.ui.components.HelpSheet

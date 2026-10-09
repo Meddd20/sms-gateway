@@ -47,7 +47,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
-import com.httpsms.R
+import com.sevanam.androidsmsgateway.R
 import com.httpsms.ui.theme.Blue500
 import com.httpsms.ui.theme.LogoGreen
 import com.httpsms.ui.theme.Pink500

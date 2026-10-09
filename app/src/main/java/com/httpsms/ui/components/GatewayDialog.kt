@@ -23,7 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.httpsms.R
+import com.sevanam.androidsmsgateway.R
 
 /**
  * The app's one dialog look: white rounded card, uppercase bold navy title,

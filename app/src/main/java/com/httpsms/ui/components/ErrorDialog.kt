@@ -2,7 +2,7 @@ package com.httpsms.ui.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
-import com.httpsms.R
+import com.sevanam.androidsmsgateway.R
 
 /**
  * Reports a request that came back with an error.

@@ -365,4 +365,24 @@ object Settings {
             .apply()
     }
 
+    private const val SETTINGS_PROCESSED_MESSAGE_IDS = "SETTINGS_PROCESSED_MESSAGE_IDS"
+    private const val MAX_PROCESSED_MESSAGES_CACHE = 100
+
+    fun isMessageProcessed(context: Context, messageId: String): Boolean {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val set = prefs.getStringSet(SETTINGS_PROCESSED_MESSAGE_IDS, emptySet()) ?: emptySet()
+        return set.contains(messageId)
+    }
+
+    fun markMessageProcessed(context: Context, messageId: String) {
+        val prefs = PreferenceManager.getDefaultSharedPreferences(context)
+        val currentSet = prefs.getStringSet(SETTINGS_PROCESSED_MESSAGE_IDS, emptySet())?.toMutableSet() ?: mutableSetOf()
+        currentSet.add(messageId)
+        if (currentSet.size > MAX_PROCESSED_MESSAGES_CACHE) {
+            val toRemove = currentSet.take(currentSet.size - MAX_PROCESSED_MESSAGES_CACHE)
+            currentSet.removeAll(toRemove.toSet())
+        }
+        prefs.edit().putStringSet(SETTINGS_PROCESSED_MESSAGE_IDS, currentSet).apply()
+    }
+
 }

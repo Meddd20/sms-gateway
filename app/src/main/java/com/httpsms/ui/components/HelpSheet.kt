@@ -25,7 +25,7 @@ import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.httpsms.R
+import com.sevanam.androidsmsgateway.R
 
 /**
  * The app's one help-sheet look, shared by every screen that explains a field:

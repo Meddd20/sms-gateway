@@ -1,7 +1,7 @@
 package com.httpsms.core
 
 import android.content.Context
-import com.httpsms.BuildConfig
+import com.sevanam.androidsmsgateway.BuildConfig
 import timber.log.Timber
 
 /**

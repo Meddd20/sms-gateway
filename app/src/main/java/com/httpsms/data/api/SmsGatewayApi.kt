@@ -2,7 +2,7 @@ package com.httpsms.data.api
 
 import android.content.Context
 import com.beust.klaxon.Klaxon
-import com.httpsms.BuildConfig
+import com.sevanam.androidsmsgateway.BuildConfig
 import com.httpsms.core.DeviceStatus
 import com.httpsms.data.model.FcmTokenRequest
 import com.httpsms.data.model.GatewayPairData

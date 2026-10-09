@@ -10,7 +10,7 @@ import android.os.Build
 import android.telephony.SmsManager
 import android.telephony.SubscriptionManager
 import androidx.core.app.ActivityCompat
-import com.httpsms.BuildConfig
+import com.sevanam.androidsmsgateway.BuildConfig
 import com.httpsms.core.Constants
 import timber.log.Timber
 

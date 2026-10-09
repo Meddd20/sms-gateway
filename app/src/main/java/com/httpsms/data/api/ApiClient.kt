@@ -1,7 +1,7 @@
 package com.httpsms.data.api
 
 import android.content.Context
-import com.httpsms.BuildConfig
+import com.sevanam.androidsmsgateway.BuildConfig
 import com.httpsms.core.Settings
 import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
