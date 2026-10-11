@@ -17,6 +17,7 @@ import com.google.android.mms.pdu_alt.MultimediaMessagePdu
 import com.google.android.mms.pdu_alt.PduParser
 import com.google.android.mms.pdu_alt.RetrieveConf
 import com.httpsms.sms.Encrypter
+import com.httpsms.background.HeartbeatReporter
 import com.httpsms.core.Constants
 import com.httpsms.core.Settings
 import com.httpsms.data.api.ApiResult
@@ -191,6 +192,10 @@ class ReceivedReceiver: BroadcastReceiver()
             )
 
             val result = SmsGatewayApi.from(applicationContext).receive(request)
+
+            // Forwarding a received message is a status report too: refresh the
+            // heartbeat alongside it.
+            HeartbeatReporter.send(applicationContext, "received message")
 
             // Cleanup temp files
             attachmentsData?.forEach {

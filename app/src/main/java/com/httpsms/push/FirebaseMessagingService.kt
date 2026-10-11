@@ -19,8 +19,8 @@ import com.google.android.mms.pdu_alt.SendReq
 import com.sevanam.androidsmsgateway.BuildConfig
 import com.httpsms.sms.Encrypter
 import com.httpsms.sms.Receiver
+import com.httpsms.background.HeartbeatReporter
 import com.httpsms.core.Constants
-import com.httpsms.core.DeviceStatus
 import com.httpsms.core.GatewayLogging
 import com.httpsms.core.Settings
 import com.httpsms.data.api.ApiResult
@@ -45,9 +45,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 "from=${remoteMessage.from} messageId=${remoteMessage.messageId} sentTime=${remoteMessage.sentTime}"
         )
 
+        // Any push - a heartbeat request or a new message to send - means the
+        // backend is waiting on this device, so refresh the heartbeat first.
+        sendHeartbeat()
+
         if (remoteMessage.data.containsKey(Constants.KEY_HEARTBEAT_ID)) {
             Timber.w("received heartbeat message with ID [${remoteMessage.data[Constants.KEY_HEARTBEAT_ID]}] and priority [${remoteMessage.priority}] and original priority [${remoteMessage.originalPriority}]")
-            sendHeartbeat()
             return
         }
 
