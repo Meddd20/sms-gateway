@@ -1,14 +1,35 @@
 package com.httpsms.background
 
 import android.app.*
+import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import android.widget.Toast
 import com.httpsms.MainActivity
+import com.httpsms.core.SimLines
 import timber.log.Timber
 import com.sevanam.androidsmsgateway.R
 
 class StickyNotificationService: Service() {
+    companion object {
+        /**
+         * Brings the foreground service up, unless no line is switched on - in which
+         * case there is nothing to keep alive. The one definition of that gate, so the
+         * boot receiver and the main screen cannot disagree about when to start it.
+         */
+        fun start(context: Context) {
+            if (!SimLines.anyActive(context)) {
+                Timber.d("no active line, not starting the foreground service")
+                return
+            }
+
+            Timber.d("starting foreground service")
+            val notificationIntent = Intent(context, StickyNotificationService::class.java)
+            val service = context.startForegroundService(notificationIntent)
+            Timber.d("foreground service started [${service?.className}]")
+        }
+    }
+
     override fun onBind(intent: Intent?): IBinder? {
         Timber.d("Some component want to bind with the service [${intent?.action}]")
         return null

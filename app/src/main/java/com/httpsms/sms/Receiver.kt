@@ -4,8 +4,8 @@ import android.content.Context
 import android.content.Context.RECEIVER_EXPORTED
 import android.content.IntentFilter
 import android.os.Build
-import com.httpsms.core.Constants
 import com.httpsms.core.Settings
+import com.httpsms.core.SimLines
 import timber.log.Timber
 
 object Receiver {
@@ -59,7 +59,7 @@ object Receiver {
             return false
         }
 
-        if (!Settings.getActiveStatus(context, Constants.SIM1) && !Settings.getActiveStatus(context, Constants.SIM2)) {
+        if (!SimLines.anyActive(context)) {
             Timber.w("cannot handle message with id [$messageId] because the user is not active")
             return false
         }

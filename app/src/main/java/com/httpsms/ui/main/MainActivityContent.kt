@@ -25,8 +25,8 @@ import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,7 +51,6 @@ import com.httpsms.ui.theme.Pink500
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
-    onSettingsClick: () -> Unit,
     onSmsPermissionClick: () -> Unit,
     onBatteryOptimizationClick: () -> Unit,
     onOemAutostartClick: () -> Unit,
@@ -174,6 +173,7 @@ fun MainScreen(
             )
         }
 
+
         Spacer(modifier = Modifier.height(16.dp))
 
         Button(
@@ -205,23 +205,6 @@ fun MainScreen(
 
         Spacer(modifier = Modifier.weight(1f))
         Spacer(modifier = Modifier.height(16.dp))
-
-        /*
-        // App Settings page is disabled for now - everything lives on this screen.
-        Button(
-            onClick = onSettingsClick,
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
-            contentPadding = PaddingValues(horizontal = 32.dp, vertical = 16.dp)
-        ) {
-            Icon(Icons.Default.Settings, contentDescription = null, tint = Color.White)
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                stringResource(id = R.string.main_app_settings),
-                color = Color.White,
-                fontSize = 18.sp
-            )
-        }
-        */
 
         Spacer(modifier = Modifier.height(16.dp))
     }

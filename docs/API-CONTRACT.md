@@ -62,7 +62,6 @@ Response envelope dengan `data` berupa object `Message`:
   "content": "isi sms / pdu",
   "sim": "SIM1",
   "owner": "+60123456789",
-  "encrypted": false,
   "status": "outstanding",
   "type": "sms",
   "created_at": "...",
@@ -81,7 +80,7 @@ Catatan:
 - `sim` = `"SIM1"` / `"SIM2"` — instruksi SIM fisik mana yang dipakai mengirim.
 - `attachments` = **array URL** (untuk MMS). App mengunduh tiap URL; batas maks 1.5 MB per file.
 - Response tanpa `data` / bukan 2xx → worker gagal.
-- `encrypted: true` → app mendekripsi konten sebelum kirim (butuh encryption key yang diset user).
+- Konten dikirim dan diterima **tanpa enkripsi**: app mengirim `content` apa adanya ke SmsManager dan meneruskan isi pesan masuk apa adanya. Tidak ada key management di app.
 
 ---
 
@@ -96,7 +95,6 @@ Request:
   "from": "+628123456",
   "to": "+60123456789",
   "content": "isi pesan",
-  "encrypted": false,
   "timestamp": "2026-09-09T03:00:00.000000Z",
   "attachments": [
     { "name": "photo.jpg", "content_type": "image/jpeg", "content": "<base64>" }
@@ -104,7 +102,7 @@ Request:
 }
 ```
 Catatan:
-- `encrypted: true` → `content` terenkripsi AES oleh app (saat user menyalakan "encrypt received messages"). `attachments` selalu base64 & tidak dienkripsi.
+- `content` dikirim apa adanya (tanpa enkripsi). `attachments` selalu base64.
 - `attachments` opsional (null kalau SMS biasa).
 - Response **4xx = berhenti** (anggap permanen), selain itu app **retry otomatis** (WorkManager) sampai sukses.
 
@@ -116,7 +114,7 @@ Catatan:
 
 Event sukses:
 ```json
-{ "event_name": "SENT",     "timestamp": "..." }
+{ "event_name": "SENT",     "timestamp": "..." },
 { "event_name": "DELIVERED", "timestamp": "..." }
 ```
 Event gagal:

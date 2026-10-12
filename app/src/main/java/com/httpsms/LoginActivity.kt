@@ -1,14 +1,11 @@
 package com.httpsms
 
-import android.Manifest
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Bundle
 import android.telephony.TelephonyManager
 import android.widget.Toast
 import androidx.activity.compose.setContent
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.LaunchedEffect
@@ -17,6 +14,7 @@ import androidx.compose.runtime.getValue
 import com.google.android.gms.common.ConnectionResult
 import com.google.android.gms.common.GoogleApiAvailability
 import com.httpsms.core.GatewayLogging
+import com.httpsms.core.PermissionGate
 import com.httpsms.core.Settings
 import com.httpsms.ui.login.LoginScreen
 import com.httpsms.ui.login.LoginViewModel
@@ -96,34 +94,15 @@ class LoginActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         Timber.i("on start")
-        requestPermissions()
+        permissions.request()
     }
 
-    private val requestPermissionLauncher = registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
-        permissions.entries.forEach {
+    private val permissions = PermissionGate.attach(this) { result ->
+        result.entries.forEach {
             Timber.d("${it.key} = ${it.value}")
         }
         // Reload SIM list now that READ_PHONE_STATE is granted
         viewModel.loadSims(this)
-    }
-
-    private fun requestPermissions() {
-        Timber.d("requesting permissions")
-
-        var permissions = arrayOf(
-            Manifest.permission.SEND_SMS,
-            Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.READ_SMS,
-        )
-
-        if(Build.VERSION.SDK_INT >= 33) {
-            permissions += Manifest.permission.POST_NOTIFICATIONS
-        }
-
-        requestPermissionLauncher.launch(permissions)
-
-        Timber.d("creating permissions launcher")
     }
 
     private fun isGooglePlayServicesAvailable(): String? {

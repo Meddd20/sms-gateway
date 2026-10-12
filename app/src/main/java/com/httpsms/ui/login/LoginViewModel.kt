@@ -9,13 +9,12 @@ import com.sevanam.androidsmsgateway.R
 import com.httpsms.background.HeartbeatReporter
 import com.httpsms.core.Constants
 import com.httpsms.core.Settings
+import com.httpsms.core.SimLines
 import com.httpsms.data.api.ApiResult
 import com.httpsms.data.api.SmsGatewayApi
 import com.httpsms.data.model.GatewayPairRequest
-import com.httpsms.sms.SimInfo
-import com.httpsms.sms.SmsManagerService
+import com.httpsms.core.SimInfo
 import com.httpsms.util.PhoneNumberValidator
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -46,7 +45,7 @@ class LoginViewModel : ViewModel() {
     }
 
     fun loadSims(context: Context) {
-        val sims = SmsManagerService.getActiveSims(context)
+        val sims = SimLines.active(context)
 
         Timber.d("Detected SIMs: ${sims.map { "${it.displayName} - ${it.number}" }}")
 
@@ -165,32 +164,18 @@ class LoginViewModel : ViewModel() {
             // The picked SIM is the default sending line; switch the others off.
             // The user can change this later from the home/settings screen.
             val selectedLabel = if (currentState.selectedSimIndex == 1) Constants.SIM2 else Constants.SIM1
-            val otherLabel = if (selectedLabel == Constants.SIM1) Constants.SIM2 else Constants.SIM1
+            val otherLabel = SimLines.otherLabel(selectedLabel)
             Settings.setActiveStatusAsync(context, true, selectedLabel)
             Settings.setActiveStatusAsync(context, false, otherLabel)
 
-            // The pairing was accepted, so the device is live now: report its
-            // status once right away instead of waiting for the heartbeat worker's
-            // first (15 minute) run.
-            sendInitialHeartbeat(context)
+            // The pairing was accepted, so the device is live now: report its status
+            // once right away instead of waiting for the heartbeat worker's first
+            // (15 minute) run. Fire-and-forget on purpose - the login screen is
+            // finished as soon as the user is redirected, and a status report must
+            // never block or fail the login itself.
+            HeartbeatReporter.sendAsync(context, "login")
 
             _uiState.value = _uiState.value.copy(isLoading = false, loginSuccess = true)
-        }
-    }
-
-    /**
-     * Sends a single heartbeat after a successful pairing, so the backend sees the
-     * device's status immediately on first login.
-     *
-     * Detached from [viewModelScope] on purpose: the login screen is finished as
-     * soon as the user is redirected to the main screen, which would cancel the
-     * request mid-flight. Failures are only logged - a heartbeat is a status
-     * report and must never block or fail the login itself.
-     */
-    private fun sendInitialHeartbeat(context: Context) {
-        val appContext = context.applicationContext
-        CoroutineScope(Dispatchers.IO).launch {
-            HeartbeatReporter.send(appContext, "login")
         }
     }
 

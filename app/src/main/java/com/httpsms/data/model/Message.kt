@@ -27,8 +27,6 @@ data class Message (
     @Json(name = "received_at")
     val receivedAt: String?,
 
-    val encrypted: Boolean,
-
     @Json(name = "request_received_at")
     val requestReceivedAt: String,
 

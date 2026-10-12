@@ -5,17 +5,11 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.telephony.SmsManager
-import androidx.work.Constraints
-import androidx.work.Data
-import androidx.work.NetworkType
-import androidx.work.OneTimeWorkRequest
-import androidx.work.WorkManager
-import androidx.work.Worker
-import androidx.work.WorkerParameters
-import androidx.work.workDataOf
+import com.httpsms.background.MessageEvent
+import com.httpsms.background.MessageEventInput
+import com.httpsms.background.WorkQueue
 import com.httpsms.core.Constants
 import com.httpsms.core.Settings
-import com.httpsms.data.api.ApiResult
 import timber.log.Timber
 import java.io.File
 
@@ -34,16 +28,16 @@ internal class SentReceiver : BroadcastReceiver() {
         val errorCode = intent.getIntExtra(EXTRA_ERROR_CODE, 0)
 
         when (resultCode) {
-            Activity.RESULT_OK -> handleMessageSent(context, messageId)
-            SmsManager.RESULT_ERROR_GENERIC_FAILURE -> handleMessageFailed(context, messageId, reason("GENERIC_FAILURE", errorCode))
-            SmsManager.RESULT_ERROR_NO_SERVICE -> handleMessageFailed(context, messageId, reason("NO_SERVICE", errorCode))
-            SmsManager.RESULT_ERROR_NULL_PDU -> handleMessageFailed(context, messageId, reason("NULL_PDU", errorCode))
-            SmsManager.RESULT_ERROR_RADIO_OFF -> handleMessageFailed(context, messageId, reason("RADIO_OFF", errorCode))
-            SmsManager.RESULT_ERROR_LIMIT_EXCEEDED -> handleMessageFailed(context, messageId, reason("LIMIT_EXCEEDED", errorCode))
-            SmsManager.RESULT_ERROR_FDN_CHECK_FAILURE -> handleMessageFailed(context, messageId, reason("FDN_CHECK_FAILURE", errorCode))
-            SmsManager.RESULT_ERROR_SHORT_CODE_NOT_ALLOWED -> handleMessageFailed(context, messageId, reason("SHORT_CODE_NOT_ALLOWED", errorCode))
-            SmsManager.RESULT_ERROR_SHORT_CODE_NEVER_ALLOWED -> handleMessageFailed(context, messageId, reason("SHORT_CODE_NEVER_ALLOWED", errorCode))
-            else -> handleMessageFailed(context, messageId, reason("UNKNOWN:$resultCode", errorCode))
+            Activity.RESULT_OK -> report(context, messageId, MessageEvent.SENT)
+            SmsManager.RESULT_ERROR_GENERIC_FAILURE -> report(context, messageId, MessageEvent.FAILED, reason("GENERIC_FAILURE", errorCode))
+            SmsManager.RESULT_ERROR_NO_SERVICE -> report(context, messageId, MessageEvent.FAILED, reason("NO_SERVICE", errorCode))
+            SmsManager.RESULT_ERROR_NULL_PDU -> report(context, messageId, MessageEvent.FAILED, reason("NULL_PDU", errorCode))
+            SmsManager.RESULT_ERROR_RADIO_OFF -> report(context, messageId, MessageEvent.FAILED, reason("RADIO_OFF", errorCode))
+            SmsManager.RESULT_ERROR_LIMIT_EXCEEDED -> report(context, messageId, MessageEvent.FAILED, reason("LIMIT_EXCEEDED", errorCode))
+            SmsManager.RESULT_ERROR_FDN_CHECK_FAILURE -> report(context, messageId, MessageEvent.FAILED, reason("FDN_CHECK_FAILURE", errorCode))
+            SmsManager.RESULT_ERROR_SHORT_CODE_NOT_ALLOWED -> report(context, messageId, MessageEvent.FAILED, reason("SHORT_CODE_NOT_ALLOWED", errorCode))
+            SmsManager.RESULT_ERROR_SHORT_CODE_NEVER_ALLOWED -> report(context, messageId, MessageEvent.FAILED, reason("SHORT_CODE_NEVER_ALLOWED", errorCode))
+            else -> report(context, messageId, MessageEvent.FAILED, reason("UNKNOWN:$resultCode", errorCode))
         }
     }
 
@@ -51,8 +45,28 @@ internal class SentReceiver : BroadcastReceiver() {
         return if (errorCode > 0) "$name (errorCode=$errorCode)" else name
     }
 
+    /**
+     * Hands the outcome to the one enqueue module: this receiver knows the result
+     * code and nothing about constraints, worker classes or input keys.
+     */
+    private fun report(context: Context, messageId: String?, event: MessageEvent, reason: String? = null) {
+        if (!Receiver.isValid(context, messageId)) {
+            return
+        }
+
+        WorkQueue.reportMessageEvent(
+            context,
+            MessageEventInput(
+                messageId = messageId!!,
+                timestamp = Settings.currentTimestamp(),
+                event = event,
+                reason = reason
+            )
+        )
+    }
+
     private fun cleanupPduFile(context: Context, messageId: String?) {
-                if (messageId == null) return
+        if (messageId == null) return
 
         try {
             val baseMessageId = messageId.substringBefore(".")
@@ -68,90 +82,6 @@ internal class SentReceiver : BroadcastReceiver() {
             }
         } catch (e: Exception) {
             Timber.e(e, "Error cleaning up PDU file for message ID [$messageId]")
-        }
-    }
-
-    private fun handleMessageSent(context: Context, messageId: String?) {
-        if (!Receiver.isValid(context, messageId)) {
-            return
-        }
-
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-
-        val inputData: Data = workDataOf(
-            Constants.KEY_MESSAGE_ID to messageId,
-            Constants.KEY_MESSAGE_TIMESTAMP to Settings.currentTimestamp()
-        )
-
-        val work = OneTimeWorkRequest
-            .Builder(SentMessageWorker::class.java)
-            .setConstraints(constraints)
-            .setInputData(inputData)
-            .build()
-
-        WorkManager
-            .getInstance(context)
-            .enqueue(work)
-
-        Timber.d("work enqueued with ID [${work.id}] for [SENT] message with ID [${messageId}]")
-    }
-
-    private fun handleMessageFailed(context: Context, messageId: String?, reason: String) {
-        if (!Receiver.isValid(context, messageId)) {
-            return
-        }
-
-        val constraints = Constraints.Builder()
-            .setRequiredNetworkType(NetworkType.CONNECTED)
-            .build()
-
-        val inputData: Data = workDataOf(
-            Constants.KEY_MESSAGE_ID to messageId,
-            Constants.KEY_MESSAGE_REASON to reason,
-            Constants.KEY_MESSAGE_TIMESTAMP to Settings.currentTimestamp()
-        )
-
-        val work = OneTimeWorkRequest
-            .Builder(FailedMessageWorker::class.java)
-            .setConstraints(constraints)
-            .setInputData(inputData)
-            .build()
-
-        WorkManager
-            .getInstance(context)
-            .enqueue(work)
-
-        Timber.d("work enqueued with ID [${work.id}] for [FAILED] message with ID [${messageId}]")
-    }
-
-    internal class SentMessageWorker(appContext: Context, workerParams: WorkerParameters) : Worker(appContext, workerParams) {
-        override fun doWork(): Result {
-            val messageId = this.inputData.getString(Constants.KEY_MESSAGE_ID)
-            val timestamp = this.inputData.getString(Constants.KEY_MESSAGE_TIMESTAMP)
-
-            Timber.i("[${timestamp}] sending [SENT] message event with ID [${messageId}]")
-
-            return when (MessageStatusReporter.sent(applicationContext, messageId!!, timestamp!!)) {
-                is ApiResult.Success -> Result.success()
-                is ApiResult.Failure -> Result.retry()
-            }
-        }
-    }
-
-    internal class FailedMessageWorker(appContext: Context, workerParams: WorkerParameters) : Worker(appContext, workerParams) {
-        override fun doWork(): Result {
-            val messageId = this.inputData.getString(Constants.KEY_MESSAGE_ID)
-            val reason = this.inputData.getString(Constants.KEY_MESSAGE_REASON)
-            val timestamp = this.inputData.getString(Constants.KEY_MESSAGE_TIMESTAMP)
-
-            Timber.i("[${timestamp}] sending [FAILED] message event with ID [${messageId}] and reason [$reason]")
-
-            return when (MessageStatusReporter.failed(applicationContext, messageId!!, timestamp!!, reason!!)) {
-                is ApiResult.Success -> Result.success()
-                is ApiResult.Failure -> Result.retry()
-            }
         }
     }
 }

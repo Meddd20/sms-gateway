@@ -21,8 +21,6 @@ object Settings {
     private const val SETTINGS_USER_ID = "SETTINGS_USER_ID"
     private const val SETTINGS_FCM_TOKEN_UPDATE_TIMESTAMP = "SETTINGS_FCM_TOKEN_UPDATE_TIMESTAMP"
     private const val SETTINGS_HEARTBEAT_TIMESTAMP = "SETTINGS_HEARTBEAT_TIMESTAMP"
-    private const val SETTINGS_ENCRYPTION_KEY = "SETTINGS_ENCRYPTION_KEY"
-    private const val SETTINGS_ENCRYPT_RECEIVED_MESSAGES = "SETTINGS_ENCRYPT_RECEIVED_MESSAGES"
     private const val SETTINGS_DEVICE_ID = "SETTINGS_DEVICE_ID"
     private const val SETTINGS_OEM_AUTOSTART_ACK = "SETTINGS_OEM_AUTOSTART_ACK"
     private const val SETTINGS_OEM_AUTOSTART_SETTINGS_OPENED = "SETTINGS_OEM_AUTOSTART_SETTINGS_OPENED"
@@ -190,43 +188,6 @@ object Settings {
             .edit()
             .putBoolean(this.SETTINGS_SIM1_INCOMING_ACTIVE, status)
             .apply()
-    }
-
-    fun setEncryptReceivedMessages(context: Context, status: Boolean) {
-        Timber.d(Settings::setEncryptReceivedMessages.name)
-
-        PreferenceManager.getDefaultSharedPreferences(context)
-            .edit()
-            .putBoolean(this.SETTINGS_ENCRYPT_RECEIVED_MESSAGES, status)
-            .apply()
-    }
-
-    fun encryptReceivedMessages(context: Context): Boolean {
-        Timber.d(Settings::encryptReceivedMessages.name)
-
-        val encryptReceivedMessages = PreferenceManager
-            .getDefaultSharedPreferences(context)
-            .getBoolean(this.SETTINGS_ENCRYPT_RECEIVED_MESSAGES,false)
-
-        Timber.d("SETTINGS_ENCRYPT_RECEIVED_MESSAGES: [$encryptReceivedMessages]")
-        return encryptReceivedMessages && !getEncryptionKey(context).isNullOrEmpty()
-    }
-
-    fun setEncryptionKey(context: Context, key: String?) {
-        Timber.d(Settings::setEncryptionKey.name)
-
-        PreferenceManager.getDefaultSharedPreferences(context)
-            .edit()
-            .putString(this.SETTINGS_ENCRYPTION_KEY, key)
-            .apply()
-    }
-
-    fun getEncryptionKey(context: Context): String? {
-        Timber.d(Settings::getEncryptionKey.name)
-
-        return PreferenceManager
-            .getDefaultSharedPreferences(context)
-            .getString(this.SETTINGS_ENCRYPTION_KEY, "")
     }
 
     fun setIncomingActiveSIM2(context: Context, status: Boolean) {

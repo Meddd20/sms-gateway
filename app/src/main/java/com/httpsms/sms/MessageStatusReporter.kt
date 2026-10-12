@@ -1,12 +1,9 @@
 package com.httpsms.sms
 
 import android.content.Context
-import com.httpsms.core.Constants
-import com.httpsms.core.DeviceStatus
-import com.httpsms.core.Settings
+import com.httpsms.background.HeartbeatReporter
 import com.httpsms.data.api.ApiResult
 import com.httpsms.data.api.SmsGatewayApi
-import timber.log.Timber
 
 /**
  * Reports a message's status (SENT / DELIVERED / FAILED) to the backend.
@@ -36,36 +33,12 @@ internal object MessageStatusReporter {
         messageId: String,
         send: (SmsGatewayApi) -> ApiResult<Unit>
     ): ApiResult<Unit> {
-        val api = SmsGatewayApi.from(context)
-        val result = send(api)
+        val result = send(SmsGatewayApi.from(context))
 
-        refreshHeartbeat(context, api, event, messageId)
+        // The report and the heartbeat travel together; the heartbeat module owns
+        // which lines are announced and never affects the result being returned.
+        HeartbeatReporter.send(context, "$event message $messageId")
 
         return result
-    }
-
-    private fun refreshHeartbeat(context: Context, api: SmsGatewayApi, event: String, messageId: String) {
-        val phoneNumbers = activePhoneNumbers(context)
-        if (phoneNumbers.isEmpty()) {
-            Timber.d("[$event] no active SIM, skipping the heartbeat for message [$messageId]")
-            return
-        }
-
-        when (val heartbeat = api.storeHeartbeat(DeviceStatus.read(context), phoneNumbers)) {
-            is ApiResult.Success -> Timber.d("[$event] heartbeat refreshed alongside message [$messageId]")
-            is ApiResult.Failure -> Timber.w("[$event] could not refresh heartbeat for message [$messageId]: [${heartbeat.message}]")
-        }
-    }
-
-    /** The lines the backend should consider active, per the active flag on each SIM. */
-    private fun activePhoneNumbers(context: Context): List<String> {
-        val phoneNumbers = mutableListOf<String>()
-        if (Settings.getActiveStatus(context, Constants.SIM1)) {
-            phoneNumbers.add(Settings.getSIM1PhoneNumber(context))
-        }
-        if (Settings.getActiveStatus(context, Constants.SIM2)) {
-            phoneNumbers.add(Settings.getSIM2PhoneNumber(context))
-        }
-        return phoneNumbers
     }
 }

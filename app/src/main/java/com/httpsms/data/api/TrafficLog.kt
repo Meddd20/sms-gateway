@@ -15,10 +15,9 @@ import timber.log.Timber
  * Every entry prints the FULL url (host + path + query) - a bare status code is
  * useless when the failure is a wrong host or a missing query parameter.
  *
- * Bodies carry credentials (`device_token`, `encryption_key`) and message content
- * (OTP text), so payloads are only printed on debug builds. Method, URL, status
- * codes and headers are always logged; credentials in headers are masked even in
- * debug.
+ * Bodies carry credentials (`device_token`) and message content (OTP text), so
+ * payloads are only printed on debug builds. Method, URL, status codes and headers
+ * are always logged; credentials in headers are masked even in debug.
  */
 object TrafficLog {
 

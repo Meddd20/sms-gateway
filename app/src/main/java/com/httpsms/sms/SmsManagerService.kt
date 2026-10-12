@@ -1,74 +1,34 @@
 package com.httpsms.sms
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Context
-import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.telephony.SmsManager
 import android.telephony.SubscriptionManager
-import androidx.core.app.ActivityCompat
 import com.sevanam.androidsmsgateway.BuildConfig
 import com.httpsms.core.Constants
+import com.httpsms.core.SimLines
 import timber.log.Timber
 
-data class SimInfo(
-    val subscriptionId: Int,
-    val slotIndex: Int,
-    val displayName: String,
-    val number: String
-)
+/**
+ * Sends SMS/MMS through the line a message is addressed to.
+ *
+ * Stateless, so it is an object rather than something every caller constructs. Which
+ * subscription a line maps to - and whether the device has one at all - is
+ * [SimLines]' business; this module only picks the manager and runs the send.
+ */
+object SmsManagerService {
+    private const val ACTION_SMS_SENT = "SMS_SENT"
+    private const val ACTION_SMS_DELIVERED = "SMS_DELIVERED"
 
-class SmsManagerService {
-    companion object {
-        private const val ACTION_SMS_SENT = "SMS_SENT"
-        private const val ACTION_SMS_DELIVERED = "SMS_DELIVERED"
+    fun sentAction(): String {
+        return "${BuildConfig.APPLICATION_ID}.$ACTION_SMS_SENT"
+    }
 
-        fun sentAction(): String {
-            return "${BuildConfig.APPLICATION_ID}.$ACTION_SMS_SENT"
-        }
-
-        fun deliveredAction(): String {
-            return "${BuildConfig.APPLICATION_ID}.$ACTION_SMS_DELIVERED"
-        }
-
-        fun isDualSIM(context: Context) : Boolean {
-            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED
-            ) {
-                Timber.w("cannot check if dual sim, no permission")
-                return false
-            }
-            val localSubscriptionManager: SubscriptionManager = if (Build.VERSION.SDK_INT < 31) {
-                SubscriptionManager.from(context)
-            } else {
-                context.getSystemService(SubscriptionManager::class.java)
-            }
-            return (localSubscriptionManager.activeSubscriptionInfoList?.size ?: 0) > 1
-        }
-
-        fun getActiveSims(context: Context): List<SimInfo> {
-            if (ActivityCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED
-            ) {
-                Timber.w("cannot check if dual sim, no permission")
-                return emptyList()
-            }
-            val localSubscriptionManager: SubscriptionManager = if (Build.VERSION.SDK_INT < 31) {
-                SubscriptionManager.from(context)
-            } else {
-                context.getSystemService(SubscriptionManager::class.java)
-            }
-            return localSubscriptionManager.activeSubscriptionInfoList.orEmpty().map { subscription ->
-                SimInfo(
-                    subscriptionId = subscription.subscriptionId,
-                    slotIndex = subscription.simSlotIndex,
-                    displayName = subscription.displayName?.toString() ?: "SIM ${subscription.simSlotIndex + 1}",
-                    number = subscription.number.orEmpty()
-                )
-
-            }
-        }
+    fun deliveredAction(): String {
+        return "${BuildConfig.APPLICATION_ID}.$ACTION_SMS_DELIVERED"
     }
 
     fun messageParts(context: Context, content: String): ArrayList<String> {
@@ -123,22 +83,8 @@ class SmsManagerService {
     @Suppress("DEPRECATION")
     @SuppressLint("MissingPermission")
     private fun getSmsManager(context: Context, sim: String = Constants.SIM1): SmsManager {
-        val localSubscriptionManager: SubscriptionManager = if (Build.VERSION.SDK_INT < 31) {
-            SubscriptionManager.from(context)
-        } else {
-            context.getSystemService(SubscriptionManager::class.java)
-        }
-
-        val infoList = localSubscriptionManager.activeSubscriptionInfoList
-        Timber.d("active subscription info size: [${infoList?.size ?: 0}]")
-
-        val subscriptionId = if (sim == Constants.SIM1 && !infoList.isNullOrEmpty()) {
-            infoList[0].subscriptionId
-        } else if (sim == Constants.SIM2 && (infoList?.size ?: 0) > 1) {
-            infoList!![1].subscriptionId
-        } else{
-            SubscriptionManager.getDefaultSmsSubscriptionId()
-        }
+        val subscriptionId = SimLines.subscriptionFor(context, sim)
+        Timber.d("sending on [$sim] with subscription [$subscriptionId]")
 
         if (subscriptionId == SubscriptionManager.INVALID_SUBSCRIPTION_ID) {
             return getDefaultSmsManager(context)

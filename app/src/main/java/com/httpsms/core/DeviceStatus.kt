@@ -1,12 +1,9 @@
 package com.httpsms.core
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
 import android.os.BatteryManager
-import android.os.Build
 import android.os.PowerManager
 import android.telephony.SubscriptionManager
 
@@ -29,38 +26,31 @@ data class DeviceStatus(
     val networkType: String
 ) {
     companion object {
-        private val SMS_PERMISSIONS = arrayOf(
-            Manifest.permission.SEND_SMS,
-            Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_SMS
-        )
+        /**
+         * True when the app is exempt from battery optimization.
+         *
+         * The one reading of this platform fact, shared by the heartbeat body and the
+         * home screen's warning, so the two can never disagree about the same device.
+         */
+        fun batteryOptimizationDisabled(context: Context): Boolean {
+            val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
+            return powerManager.isIgnoringBatteryOptimizations(context.packageName)
+        }
 
         fun read(context: Context): DeviceStatus {
-            val smsPermissionGranted = SMS_PERMISSIONS.all {
-                context.checkSelfPermission(it) == PackageManager.PERMISSION_GRANTED
-            }
-
-            val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
-            val batteryOptimizationDisabled = powerManager.isIgnoringBatteryOptimizations(context.packageName)
+            val smsPermissionGranted = PermissionGate.messagingGranted(context)
+            val batteryOptimizationExempt = batteryOptimizationDisabled(context)
 
             val batteryManager = context.getSystemService(Context.BATTERY_SERVICE) as BatteryManager
             val batteryLevel = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
 
             val activeSubscriptionId = SubscriptionManager.getDefaultSmsSubscriptionId()
-            val subscriptionManager: SubscriptionManager = if (Build.VERSION.SDK_INT >= 31) {
-                context.getSystemService(SubscriptionManager::class.java)
-            } else {
-                @Suppress("DEPRECATION")
-                SubscriptionManager.from(context)
-            }
-            val simCarrier = subscriptionManager.activeSubscriptionInfoList
-                ?.firstOrNull { it.subscriptionId == activeSubscriptionId }
-                ?.carrierName?.toString().orEmpty()
+            val simCarrier = SimLines.carrierFor(context, activeSubscriptionId)
 
             return DeviceStatus(
                 deviceId = Settings.getDeviceId(context),
                 smsPermissionGranted = smsPermissionGranted,
-                batteryOptimizationDisabled = batteryOptimizationDisabled,
+                batteryOptimizationDisabled = batteryOptimizationExempt,
                 batteryLevel = batteryLevel,
                 isCharging = batteryManager.isCharging,
                 activeSubscriptionId = activeSubscriptionId,
