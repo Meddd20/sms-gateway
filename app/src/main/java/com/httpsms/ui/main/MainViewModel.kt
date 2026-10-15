@@ -152,7 +152,9 @@ class MainViewModel : ViewModel() {
 
         viewModelScope.launch {
             val outcome = withContext(Dispatchers.IO) {
-                HeartbeatReporter.send(context, "manual")
+                // Forced: the user pressed the button to see a report now, so the
+                // rate limit must not silently swallow the request.
+                HeartbeatReporter.send(context, "manual", force = true)
             }
             // Only a real failure carries something worth showing; "nothing to report"
             // and "not logged in" leave the screen clean.

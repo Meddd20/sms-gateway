@@ -66,7 +66,10 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun sendHeartbeat() {
         Timber.d("sending heartbeat from FCM notification")
-        HeartbeatReporter.sendAsync(applicationContext, "fcm trigger")
+        // Forced: a heartbeat ping is the backend explicitly asking for a fresh
+        // status (contract §9.3), so the rate limit must not swallow it - and as an
+        // explicit request it does not move the automatic 15-minute window either.
+        HeartbeatReporter.sendAsync(applicationContext, "fcm trigger", force = true)
     }
 
     private fun scheduleJob(messageID: String) {

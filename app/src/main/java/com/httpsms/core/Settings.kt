@@ -9,6 +9,18 @@ import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 object Settings {
+
+    /**
+     * Credentials must never reach the logs in full: with the remote sink planted,
+     * every Timber line ships off the device, so keys and tokens are masked here.
+     */
+    private fun mask(value: String?): String {
+        return when {
+            value == null -> "null"
+            value.length <= 8 -> "***(${value.length} chars)"
+            else -> "${value.take(4)}***(${value.length} chars)"
+        }
+    }
     private const val SETTINGS_SIM1_PHONE_NUMBER = "SETTINGS_SIM1_PHONE_NUMBER"
     private const val SETTINGS_SIM2_PHONE_NUMBER = "SETTINGS_SIM2_PHONE_NUMBER"
     private const val SETTINGS_SIM1_ACTIVE = "SETTINGS_SIM1_ACTIVE_STATUS"
@@ -246,7 +258,7 @@ object Settings {
             .getDefaultSharedPreferences(context)
             .getString(this.SETTINGS_API_KEY,null)
 
-        Timber.d("SETTINGS_API_KEY: [$apiKey]")
+        Timber.d("SETTINGS_API_KEY: [${mask(apiKey)}]")
         return apiKey
     }
 
@@ -286,7 +298,7 @@ object Settings {
             .getDefaultSharedPreferences(context)
             .getString(this.SETTINGS_FCM_TOKEN,null)
 
-        Timber.d("SETTINGS_FCM_TOKEN: [$activeStatus]")
+        Timber.d("SETTINGS_FCM_TOKEN: [${mask(activeStatus)}]")
         return activeStatus
     }
 

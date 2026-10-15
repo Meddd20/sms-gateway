@@ -24,6 +24,11 @@ import timber.log.Timber
  * The active-line rule lives here so it cannot drift: a line is reported only while
  * its own active flag is set, which is what `docs/API-CONTRACT.md` §6 promises the
  * backend for `phone_numbers`.
+ *
+ * Sends are rate limited to one POST per [Constants.HEARTBEAT_MIN_INTERVAL_MS]
+ * (measured from the last *successful* send), because the piggyback triggers fire far
+ * more often than the backend needs - a worker retrying every backoff step used to
+ * fire a heartbeat per attempt.
  */
 internal object HeartbeatReporter {
 
@@ -38,6 +43,9 @@ internal object HeartbeatReporter {
         /** No line is active, so the backend would learn nothing new. */
         data object NoActiveLine : Outcome
 
+        /** A heartbeat was sent less than one interval ago, so the backend's view is still fresh. */
+        data object Skipped : Outcome
+
         /** The request was attempted and did not succeed. */
         data class Failed(val message: String) : Outcome
     }
@@ -46,22 +54,33 @@ internal object HeartbeatReporter {
      * Blocking. Use from a worker or any caller that must know the result; the
      * caller picks the thread.
      *
+     * Rate limited: unless [force] is set, a heartbeat is only POSTed when the last
+     * *successful automatic* one is at least [Constants.HEARTBEAT_MIN_INTERVAL_MS]
+     * old. The many piggyback triggers (every FCM push, every event report, every
+     * received message, every worker retry) would otherwise flood the backend with
+     * near-identical status reports; the timestamp is only written on success, so a
+     * failing heartbeat is never blocked from retrying.
+     *
+     * [force] is for explicit requests - the manual "Send Heartbeat" button and the
+     * backend's FCM heartbeat ping. A forced send bypasses the window AND does not
+     * write the timestamp, so it can never push the automatic cadence back.
+     *
      * Never throws. A status report must not be able to take down the work it
      * accompanies, and the platform reads it performs (reading the device's SIM
      * lines needs READ_PHONE_STATE) can raise `SecurityException` when a permission
      * is denied or revoked mid-flight. Those surface as [Outcome.Failed], which a
      * worker can retry, instead of as an uncaught exception.
      */
-    fun send(context: Context, reason: String): Outcome {
+    fun send(context: Context, reason: String, force: Boolean = false): Outcome {
         return try {
-            attempt(context, reason)
+            attempt(context, reason, force)
         } catch (e: Exception) {
             Timber.w(e, "[$reason] heartbeat failed")
             Outcome.Failed(e.message ?: e.javaClass.simpleName)
         }
     }
 
-    private fun attempt(context: Context, reason: String): Outcome {
+    private fun attempt(context: Context, reason: String, force: Boolean): Outcome {
         if (!Settings.isLoggedIn(context)) {
             Timber.d("[$reason] not logged in, skipping heartbeat")
             return Outcome.NotLoggedIn
@@ -73,9 +92,24 @@ internal object HeartbeatReporter {
             return Outcome.NoActiveLine
         }
 
+        val elapsedMs = System.currentTimeMillis() - Settings.getHeartbeatTimestamp(context)
+        if (!force && elapsedMs < Constants.HEARTBEAT_MIN_INTERVAL_MS) {
+            Timber.d(
+                "[$reason] last heartbeat was [${elapsedMs / 1000}]s ago, under the " +
+                    "[${Constants.HEARTBEAT_MIN_INTERVAL_MS / 1000}]s limit, skipping"
+            )
+            return Outcome.Skipped
+        }
+
         return when (val result = SmsGatewayApi.from(context).storeHeartbeat(DeviceStatus.read(context), phoneNumbers)) {
             is ApiResult.Success -> {
-                Settings.setHeartbeatTimestampAsync(context, System.currentTimeMillis())
+                // Only an automatic send moves the rate-limit window: a forced send
+                // (manual button, backend ping) is an explicit request on top of the
+                // cadence, and it must not push the next automatic heartbeat out by
+                // a whole interval.
+                if (!force) {
+                    Settings.setHeartbeatTimestampAsync(context, System.currentTimeMillis())
+                }
                 Timber.d("[$reason] heartbeat sent for [${phoneNumbers.joinToString()}]")
                 Outcome.Sent
             }
@@ -90,11 +124,14 @@ internal object HeartbeatReporter {
      * Fire-and-forget, for callers that must never wait or fail - a broadcast
      * receiver returning, a screen being finished. Detached from any caller's
      * lifetime on purpose, so the report still completes after they are gone.
+     *
+     * [force] means an explicit request (the backend's FCM heartbeat ping), which
+     * bypasses the rate limit and does not move the automatic window.
      */
-    fun sendAsync(context: Context, reason: String) {
+    fun sendAsync(context: Context, reason: String, force: Boolean = false) {
         val appContext = context.applicationContext
         scope.launch {
-            send(appContext, reason)
+            send(appContext, reason, force)
         }
     }
 

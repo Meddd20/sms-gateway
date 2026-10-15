@@ -20,6 +20,10 @@ class HeartbeatWorker(appContext: Context, workerParams: WorkerParameters) : Wor
                 Timber.w("no active line, nothing to report")
                 Result.success()
             }
+            is HeartbeatReporter.Outcome.Skipped -> {
+                Timber.d("heartbeat sent within the last interval, nothing to report")
+                Result.success()
+            }
             is HeartbeatReporter.Outcome.NotLoggedIn -> {
                 Timber.w("user is not logged in, stopping processing")
                 Result.failure()

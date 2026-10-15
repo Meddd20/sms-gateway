@@ -34,9 +34,11 @@ object GatewayLogging {
             Timber.plant(Timber.DebugTree())
         }
 
-        // Remote sink stays opt-in: it ships logs off the device.
-        if (Settings.isDebugLogEnabled(applicationContext)) {
-            Timber.plant(LogzTree(applicationContext))
-        }
+        // Remote sink, planted unconditionally: a field device (a tester's phone
+        // with no adb attached) must ship its logs to Axiom, or failures like a
+        // rejected forward are invisible to everyone. Payload bodies stay hidden
+        // on release builds (TrafficLog), so what leaves the device is metadata:
+        // urls, status codes, phone numbers, message ids.
+        Timber.plant(LogzTree(applicationContext))
     }
 }

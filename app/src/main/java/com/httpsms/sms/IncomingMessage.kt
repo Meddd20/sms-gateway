@@ -167,7 +167,10 @@ internal object IncomingMessageHandler {
 
 /**
  * Posts one forwarded message, best-effort refreshing the heartbeat alongside it.
- * A failed request retries so an inbound message is not lost.
+ * A failed request retries on the exponential backoff indefinitely - an inbound
+ * message is never dropped by the app; the growing gaps (1, 2, 4, 8... minutes)
+ * keep a long outage from becoming a request storm, and every attempt is logged
+ * with the server's own reason so the backend team can see what they are refusing.
  */
 internal class ForwardReceivedWorker(appContext: Context, workerParams: WorkerParameters) : Worker(appContext, workerParams) {
     override fun doWork(): Result {
@@ -216,7 +219,30 @@ internal class ForwardReceivedWorker(appContext: Context, workerParams: WorkerPa
 
         return when (result) {
             is ApiResult.Success -> Result.success()
-            is ApiResult.Failure -> Result.retry()
+            is ApiResult.Failure -> {
+                // Once the exponential curve has reached WorkManager's 5-hour cap,
+                // hand the message to a fresh request so the wait restarts at one
+                // minute instead of staying at 5 hours forever. The message is
+                // never dropped - the curve just sawtooths back down.
+                if (runAttemptCount >= WorkQueue.BACKOFF_RESET_AFTER_ATTEMPTS) {
+                    WorkQueue.forwardReceivedMessage(applicationContext, received)
+                    Timber.w(
+                        "retry backoff reached the cap, restarting the curve " +
+                            "for the message from [${received.from}]"
+                    )
+                    return Result.success()
+                }
+
+                // Every attempt must be visible: a worker stuck retrying is
+                // otherwise indistinguishable from "nothing happened". The
+                // exponential growth keeps the retries sparse, so retrying
+                // forever costs the backend almost nothing.
+                Timber.e(
+                    "forwarding failed (attempt [${runAttemptCount + 1}]), " +
+                        "WorkManager will retry: [${result.message}]"
+                )
+                Result.retry()
+            }
         }
     }
 }

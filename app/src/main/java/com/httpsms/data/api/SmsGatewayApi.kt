@@ -59,9 +59,12 @@ class SmsGatewayApi internal constructor(private val client: ApiClient) {
             is HttpExchange.TransportFailure -> ApiResult.Failure(exchange.message)
             is HttpExchange.Response -> when {
                 exchange.isSuccessful -> ApiResult.Success(Unit)
-                // A 4xx is a permanent rejection (the payload was refused), so
-                // retrying cannot help - report it as done and let the worker stop.
-                exchange.code in 400..499 -> ApiResult.Success(Unit)
+                // Every rejection is retryable, 4xx included: a 4xx is often a
+                // fixable misconfiguration (auth header, route not deployed) rather
+                // than a bad payload, and an inbound message must not be lost while
+                // the backend is being repaired. The worker bounds the retries and
+                // logs each failure, so a permanently broken payload gives up
+                // loudly after about an hour instead of silently.
                 else -> ApiResult.Failure(exchange.errorMessage())
             }
         }

@@ -12,9 +12,12 @@ import timber.log.Timber
  *
  * One worker for all three, because they differ only in which report fires and
  * whether a reason travels with them - that is [MessageEvent]'s job to know, not a
- * class's. A failed request retries so the event is not lost.
+ * class's. A failed request retries on the exponential backoff indefinitely, like
+ * [ForwardReceivedWorker]; a 404 never reaches the retry path because the API layer
+ * already treats "message deleted server-side" as done.
  */
 internal class MessageEventWorker(appContext: Context, workerParams: WorkerParameters) : Worker(appContext, workerParams) {
+
     override fun doWork(): Result {
         val event = WorkQueue.Input.messageEvent(inputData)
         if (event == null) {
@@ -32,7 +35,24 @@ internal class MessageEventWorker(appContext: Context, workerParams: WorkerParam
 
         return when (result) {
             is ApiResult.Success -> Result.success()
-            is ApiResult.Failure -> Result.retry()
+            is ApiResult.Failure -> {
+                // Same sawtooth as ForwardReceivedWorker: at the 5-hour cap,
+                // re-enqueue as a fresh request so the wait restarts at one minute.
+                if (runAttemptCount >= WorkQueue.BACKOFF_RESET_AFTER_ATTEMPTS) {
+                    WorkQueue.reportMessageEvent(applicationContext, event)
+                    Timber.w(
+                        "retry backoff reached the cap, restarting the curve for the " +
+                            "[${event.event.wireName}] event of message [${event.messageId}]"
+                    )
+                    return Result.success()
+                }
+
+                Timber.e(
+                    "event report failed (attempt [${runAttemptCount + 1}]), " +
+                        "WorkManager will retry: [${result.message}]"
+                )
+                Result.retry()
+            }
         }
     }
 }

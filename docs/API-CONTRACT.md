@@ -10,7 +10,7 @@ Update file ini setiap payload/protocol berubah.
 | Item | Nilai |
 |---|---|
 | Base URL | **Statis** di `BuildConfig.SERVER_URL` (build-time, dibaca dari `local.properties`; placeholder `https://api.example.com/` — ganti dengan backend sendiri sebelum build). |
-| Header semua request | `x-api-key: <API key user>` dan `X-Client-Version: <versi app>` (contoh `1.0.0`). |
+| Header semua request | `Authorization: Bearer <device_token>` dan `X-Client-Version: <versi app>` (contoh `1.0.0`). |
 | Envelope response standar | `{ "data": ..., "message": "...", "status": "..." }` (diparse oleh app; `data` bisa berisi object). |
 | Format timestamp | ISO-8601 UTC: `yyyy-MM-dd'T'HH:mm:ss.SSS'000000'Z` (mis. `2026-09-09T03:00:00.000000Z`). |
 
@@ -103,7 +103,9 @@ Request:
 Catatan:
 - `content` dikirim apa adanya (tanpa enkripsi). `attachments` selalu base64.
 - `attachments` opsional (null kalau SMS biasa).
-- Response **4xx = berhenti** (anggap permanen), selain itu app **retry otomatis** (WorkManager) sampai sukses.
+- Response **selain 2xx = app retry otomatis** (WorkManager, backoff eksponensial mulai 1 menit: 1, 2, 4, 8, 16, ... menit) **sampai sukses** — **termasuk 4xx**, karena 4xx sering kali salah konfigurasi yang bisa diperbaiki (auth, route), dan pesan masuk tidak boleh hilang.
+- Jeda retry **tidak pernah menetap di 5 jam**: begitu kurva mencapai batas maksimum WorkManager (5 jam), app memulai ulang kurva dari 1 menit (pola gergaji: 1, 2, 4, ..., 5 jam, lalu 1, 2, 4, ... lagi). Satu siklus penuh ± 13,5 jam.
+- App **tidak pernah menghapus** pesan masuk yang gagal — retry berjalan terus sampai backend menerimanya. Setiap percobaan gagal tercatat di log app dengan alasan dari server.
 
 ---
 
@@ -188,7 +190,7 @@ Catatan: `phone_numbers` masih dipertahankan untuk kompatibilitas routing lama.
 
 ### 9.1 Registrasi & otentikasi line (device → server)
 
-User memasukkan **API key** (dikirim sebagai header `x-api-key` di semua request) dan memilih nomor dari SIM yang terdeteksi.
+User memasukkan **API key** (dikirim sebagai header `Authorization: Bearer <device_token>` di semua request) dan memilih nomor dari SIM yang terdeteksi.
 
 `PUT /v1/phones/fcm-token` dipanggil oleh device pada saat:
 1. **Login** (SIM1 wajib; SIM2 bila terdeteksi) — sekaligus validasi API key: **401 = API key salah, proses berhenti**.

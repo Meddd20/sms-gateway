@@ -1,6 +1,7 @@
 package com.httpsms.background
 
 import android.content.Context
+import androidx.work.BackoffPolicy
 import androidx.work.Constraints
 import androidx.work.Data
 import androidx.work.ExistingPeriodicWorkPolicy
@@ -54,7 +55,6 @@ internal data class ReceivedMessageInput(
 internal object WorkQueue {
 
     private const val HEARTBEAT_TAG = "TAG_HEARTBEAT_WORKER"
-    private const val HEARTBEAT_INTERVAL_MINUTES = 15L
 
     /** Fetch and send the message an FCM push pointed at; unique per message. */
     fun sendMessage(context: Context, messageId: String) {
@@ -67,13 +67,37 @@ internal object WorkQueue {
         )
     }
 
+    /**
+     * The retry rhythm for a worker that reports to the backend: exponential
+     * backoff starting at one minute (1, 2, 4, 8, 16... minutes), with no give-up.
+     * An inbound message or an event report is never dropped by the app - the
+     * exponential growth is what keeps a long outage from becoming a request
+     * storm. WorkManager caps a single gap at 5 hours; once the curve reaches that
+     * cap, the worker re-enqueues itself as a fresh request (see
+     * [BACKOFF_RESET_AFTER_ATTEMPTS]) so the wait drops back to one minute instead
+     * of settling at 5 hours forever.
+     */
+    private val MESSAGE_RETRY_BACKOFF: Pair<BackoffPolicy, Pair<Long, TimeUnit>> =
+        BackoffPolicy.EXPONENTIAL to (1L to TimeUnit.MINUTES)
+
+    /**
+     * The run attempt at which the exponential curve is considered capped. With a
+     * 1-minute initial delay the waits are 1, 2, 4 ... 256 minutes, and the next
+     * one would be WorkManager's 5-hour maximum - so from this attempt on, the
+     * worker hands its work to a fresh request and the curve starts over. One
+     * full cycle is therefore roughly 1+2+...+256+300 ≈ 13.5 hours, with the
+     * longest single wait being the one 5-hour gap.
+     */
+    internal const val BACKOFF_RESET_AFTER_ATTEMPTS = 10
+
     /** Report how a send attempt ended. */
     fun reportMessageEvent(context: Context, input: MessageEventInput) {
         enqueue(
             context = context,
             worker = MessageEventWorker::class.java,
             input = Input.messageEvent(input),
-            tag = "event_${input.messageId}"
+            tag = "event_${input.messageId}",
+            backoff = MESSAGE_RETRY_BACKOFF
         )
     }
 
@@ -83,13 +107,14 @@ internal object WorkQueue {
             context = context,
             worker = ForwardReceivedWorker::class.java,
             input = Input.receivedMessage(input),
-            tag = "received_${input.sim}"
+            tag = "received_${input.sim}",
+            backoff = MESSAGE_RETRY_BACKOFF
         )
     }
 
-    /** The ~15 minute heartbeat, unique so repeated calls do not stack. */
+    /** The heartbeat, unique so repeated calls do not stack. */
     fun scheduleHeartbeat(context: Context) {
-        val request = PeriodicWorkRequestBuilder<HeartbeatWorker>(HEARTBEAT_INTERVAL_MINUTES, TimeUnit.MINUTES)
+        val request = PeriodicWorkRequestBuilder<HeartbeatWorker>(Constants.HEARTBEAT_INTERVAL_MINUTES, TimeUnit.MINUTES)
             .setConstraints(networkRequired())
             .addTag(HEARTBEAT_TAG)
             .build()
@@ -106,11 +131,14 @@ internal object WorkQueue {
         worker: Class<out ListenableWorker>,
         input: Data,
         tag: String? = null,
-        uniqueName: String? = null
+        uniqueName: String? = null,
+        backoff: Pair<BackoffPolicy, Pair<Long, TimeUnit>> =
+            BackoffPolicy.EXPONENTIAL to (30L to TimeUnit.SECONDS)
     ) {
         val builder = OneTimeWorkRequest.Builder(worker)
             .setConstraints(networkRequired())
             .setInputData(input)
+            .setBackoffCriteria(backoff.first, backoff.second.first, backoff.second.second)
 
         if (tag != null) {
             builder.addTag(tag)

@@ -15,6 +15,15 @@ class Constants {
 
         const val KEY_HEARTBEAT_ID = "KEY_HEARTBEAT_ID"
 
+        /**
+         * The heartbeat cadence, shared by the periodic schedule (WorkQueue) and the
+         * rate limit (HeartbeatReporter) so the two can never drift apart: the
+         * periodic worker fires every [HEARTBEAT_INTERVAL_MINUTES], and no two
+         * heartbeat POSTs may land closer than one interval apart.
+         */
+        const val HEARTBEAT_INTERVAL_MINUTES = 15L
+        const val HEARTBEAT_MIN_INTERVAL_MS = HEARTBEAT_INTERVAL_MINUTES * 60 * 1000
+
         const val SIM1 = "SIM1"
         const val SIM2 = "SIM2"
 
