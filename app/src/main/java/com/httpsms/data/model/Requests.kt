@@ -4,8 +4,22 @@ import com.beust.klaxon.Json
 
 /** Body of `POST messages/receive`: an SMS/MMS that arrived on the device. */
 data class ReceivedMessageRequest(
-    val recipient: String,
-    val message: String
+    val sim: String,
+
+    @Json(name = "from_number")
+    val fromNumber: String,
+
+    @Json(name = "to_number")
+    val toNumber: String,
+
+    val content: String,
+
+    val encrypted: Boolean = false,
+
+    val attachments: List<String>? = null,
+
+    @Json(name = "received_timestamp")
+    val receivedTimestamp: String,
 )
 
 /** Body of `POST gateway/pair`: first login, exchanges a pairing code for a device token. */

@@ -92,13 +92,12 @@ Request:
 ```json
 {
   "sim": "SIM1",
-  "from": "+628123456",
-  "to": "+60123456789",
+  "from_number": "+628123456",
+  "to_number": "+60123456789",
   "content": "isi pesan",
-  "timestamp": "2026-09-09T03:00:00.000000Z",
-  "attachments": [
-    { "name": "photo.jpg", "content_type": "image/jpeg", "content": "<base64>" }
-  ]
+  "encrypted": false,
+  "attachments": null,
+  "received_timestamp": "2026-09-09T03:00:00.000000Z"
 }
 ```
 Catatan:

@@ -32,7 +32,7 @@ internal data class IncomingMessage(
     val to: String,
     val sim: String,
     val content: String,
-    val attachments: List<String>? = null
+    val attachments: List<String>? = null,
 )
 
 /**
@@ -183,8 +183,26 @@ internal class ForwardReceivedWorker(appContext: Context, workerParams: WorkerPa
 
         Timber.i("[${received.sim}] forwarding received message from [${received.from}] to [${received.to}]")
 
+        val base64Attachments = received.attachments?.mapNotNull { entry ->
+            val path = entry.split("|")[0]
+            val file = File(path)
+            if (file.exists()) {
+                android.util.Base64.encodeToString(file.readBytes(), android.util.Base64.NO_WRAP)
+            } else {
+                null
+            }
+        }
+
         val result = SmsGatewayApi.from(applicationContext).receive(
-            ReceivedMessageRequest(recipient = received.from, message = received.content)
+            ReceivedMessageRequest(
+                sim = received.sim,
+                fromNumber = received.from,
+                toNumber = received.to,
+                content = received.content,
+                encrypted = false,
+                attachments = if (base64Attachments.isNullOrEmpty()) null else base64Attachments,
+                receivedTimestamp = received.timestamp
+            )
         )
 
         // Cleanup temp files
